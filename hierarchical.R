@@ -2,7 +2,6 @@
 source("internal_funcs.R")
 
 
-
 get_node_color <- function(R, i, signif){
   hc <- R$HCL
   internal_nodes <- dim(R$HCL$merge)[1]

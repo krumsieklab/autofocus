@@ -101,7 +101,7 @@ cluster_net <- function(
   vs <- V(G)
   vs$platform <- platforms
   es <- as.data.frame(get.edgelist(G))
-  L <- layout_in_circle(G)
+  L <- layout_nicely(G)
   #colnames(L)<- vs$name
   #rownames(L)<- vs$name
   

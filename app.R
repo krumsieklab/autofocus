@@ -9,8 +9,6 @@ library(tictoc)
 library(networkD3)
 library(htmlwidgets)
 
-load("adni_results.rmd")
-
 ui <- fluidPage(
   titlePanel("AutoFocus Results"),
 
