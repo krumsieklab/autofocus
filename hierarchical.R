@@ -129,7 +129,8 @@ find_sig_clusts <- function(R, outcome, confounders, cores = 1){
   R$colors <- mapply(function(i) get_node_color(R, i, signif), 1:all_nodes)
   ###CUT 3###
   R<- R %>% build_sig_clusts() %>% make_full_dend() %>% make_bar_plots() %>% make_windows()
-  R
+  to_remove <- c("data", "C", "dist", "clusts", "annos")
+  R[!(names(R) %in% to_remove)]  
 }
 
 
