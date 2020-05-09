@@ -25,8 +25,9 @@ server <- function(input, output) {
   selected_node = reactiveValues(n = NA)
   observeEvent(event_data("plotly_click"),{
     d<-event_data("plotly_click")
+    acceptable_colors = c("purple", "orange")
     print(R$color[R$order_coords$index[which(R$order_coords$y ==d$y)]])
-    if (R$color[R$order_coords$index[which(R$order_coords$y ==d$y)]] == "purple"){
+    if (R$color[R$order_coords$index[which(R$order_coords$y ==d$y)]] %in% acceptable_colors){
       selected_node$n = R$order_coords$index[which(R$order_coords$y ==d$y)]
     }
   })
