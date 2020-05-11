@@ -1,5 +1,5 @@
-source("internal_funcs.R")
-source("hierarchical.R")
+source(codes.makepath("autofocus/internal_funcs.R"))
+source(codes.makepath("autofocus/hierarchical.R"))
 
 set.seed(NULL)
 
