@@ -1,5 +1,5 @@
 #### init ----
-source("internal_funcs.R")
+source(codes.makepath("autofocus/internal_funcs.R"))
 
 
 get_node_color <- function(R, i, signif){
