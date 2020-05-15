@@ -8,7 +8,8 @@ make_R <- function(
   mol_data_rows,
   phenotype,
   confounders,
-  filename,
+  save_file = F,
+  filename = "outfile.rmd",
   cores = 7
 ){
   data_mat <- t(assay(SE))
@@ -16,7 +17,9 @@ make_R <- function(
   mol_data <- data.frame(rowData(SE))[mol_data_rows]
   R <- initialize(data_mat, sample_data, mol_data) %>% 
     find_sig_clusts(phenotype, confounders, cores)
-  save(R, file = filename)
+  if(save_file){
+    save(R, file = filename)
+  }
   R
 }
 
