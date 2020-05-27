@@ -1,14 +1,13 @@
+source(codes.makepath("autofocus/internal_funcs.R"))
 library(shiny)
 library(plotly)
-source("internal_funcs.R")
-library(htmlwidgets)
 library(dendextend)
 
 ui <- fluidPage(
   titlePanel("AutoFocus Results"),
 
   selectInput(inputId = "outcome", label = "Select Disease Phenotype",
-              choices = c("No outcome", colnames(R$samples)),
+              choices = c("No outcome", phenotypes),
               selected = "No outcome"), #Outcome
 
       fluidRow(mainPanel("Module Browser", plotlyOutput("dendro"), plotlyOutput("clust"))),
@@ -17,6 +16,7 @@ ui <- fluidPage(
 
 
 server <- function(input, output) {
+  R <- R_list[[which(phenotypes == input$outcome)]]
   dend_xy <- R$HCL %>% as.dendrogram %>%get_nodes_xy()
   order_coords <- data.frame(index = R$order, 
                              x = round(dend_xy[,1], digits = 10), 
@@ -66,29 +66,10 @@ server <- function(input, output) {
 
     x_axis$range <- x
     y_axis$range <- y
-
-    dend_G <- graph_from_adjacency_matrix(dend_to_adj_mat(hc)) 
-    es <- as.data.frame(get.edgelist(dend_G))
-    
-    
-    dend_network <- 
-      plot_ly(x = ~order_coords$x,
-              y = ~order_coords$y
-              ) %>% 
-      add_segments(data = data.frame(
-                   x = c(order_coords$x[es$V1], order_coords$x[es$V2]),
-                   xend = c(order_coords$x[es$V2],order_coords$x[es$V2]), 
-                   y = c(order_coords$y[es$V1], order_coords$y[es$V1]), 
-                   yend = c(order_coords$y[es$V1], order_coords$y[es$V2])),
-                   x = ~x,xend = ~xend,y = ~y,yend = ~yend,
-                   mode='lines',color = I('black'),size = I(1), alpha = 0.5)%>%
-    add_trace(type='scatter',
-              mode = "markers",
-              text = ~R$labels,
-              marker = list(color = R$colors))
+   
     
     dend_network<-plotly::layout(
-      dend_network,
+      plot_dend(R, order_coords),
       xaxis = x_axis,
       yaxis = y_axis,
       showlegend = F
@@ -99,30 +80,30 @@ server <- function(input, output) {
     
     ### Subnetwork ###
   
-output$clust <- renderPlotly({
+  output$clust <- renderPlotly({
       
-  axis <- list(
-    title = "",
-    showline = TRUE,
-    showticklabels = F,
-    mirror="ticks",
-    showgrid = F,
-    zeroline = F,
-    linecolor = toRGB("black"),
-    linewidth = 2
-  )
-  
-  if (is.na(selected_node$n)){
-    net = plotly_empty() %>% add_annotations(text = "Select a Cluster to View", showarrow = F) %>% layout(xaxis = axis, yaxis = axis)
-  }
-  else{
-      net<-plotly::layout(
-      cluster_net(R, as.double(selected_node$n)),
-      xaxis = axis,
-      yaxis = axis,
-      showlegend=F
+    axis <- list(
+      title = "",
+      showline = TRUE,
+      showticklabels = F,
+      mirror="ticks",
+      showgrid = F,
+      zeroline = F,
+      linecolor = toRGB("black"),
+      linewidth = 2
     )
-  }
+    
+    if (is.na(selected_node$n)){
+      net = plotly_empty() %>% add_annotations(text = "Select a Cluster to View", showarrow = F) %>% layout(xaxis = axis, yaxis = axis)
+    }
+    else{
+        net<-plotly::layout(
+        cluster_net(R, as.double(selected_node$n)),
+        xaxis = axis,
+        yaxis = axis,
+        showlegend=F
+      )
+    }
 
   net
 })

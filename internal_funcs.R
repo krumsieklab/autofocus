@@ -6,6 +6,7 @@ library(foreach)
 library(RColorBrewer)
 library(plotly)
 
+### Initialize R structure from raw data and sample and molecule annotations  ----------------
 
 initialize <- function(
   data.matrix, # Matrix of raw data (samples * nodes)
@@ -28,6 +29,51 @@ initialize <- function(
   R
 }
 
+### Use BIC to determine color of node corresponding to source of significance  ----------------
+
+get_node_color <- function(R, i, signif){
+  hc <- R$HCL
+  internal_nodes <- dim(hc$merge)[1]
+  if (i %in% signif[!is.na(signif)]){
+    if (i > (internal_nodes)) return('blue')
+    else {
+      
+      children <- hc$merge[i,]
+      child1 <- if (children[1]<0) (internal_nodes + abs(children[1])) else children[1]
+      child2 <- if (children[2]<0) (internal_nodes + abs(children[2])) else children[2]
+      
+      ## Children aren't significant, combination is
+      if (R$pvals[child1] > 0.05 & R$pvals[child2] > 0.05) return("purple")
+      
+      ## Children are significant
+      if(R$pvals[child1] < 0.05 & R$pvals[child2] < 0.05){
+        
+        if (R$BIC[i] < R$BIC[child1] & R$BIC[i]<R$BIC[child2]) return("purple") else return("orange")
+      }
+      
+      ## One child is significant
+      else {
+        sig_child <- if (R$pvals[child1] < R$pvals[child2]) child1 else child2
+        
+        if(R$BIC[i] < R$BIC[sig_child]) return("purple") else return("orange")
+      }
+    }
+  }
+  else{
+    return("black")
+  }
+}
+
+### Get labels for nodes  ----------------
+
+get_node_label <- function(R, i){
+  internal_nodes <- dim(R$HCL$merge)[1]
+  if (i > (internal_nodes)) return(R$HCL$labels[(i - internal_nodes)])
+  else return(paste("BIC: ", round( R$BIC[i], digits = 3), ", p-value: ", R$pvals[i]))
+}
+
+### Get the members of a module given parent node index  ----------------
+
 get_members <- function(
   R,
   i,
@@ -49,6 +95,7 @@ abs_cor_dist <- function(
   as.dist((1-abs(R$C))) # abs correlation
 }
 
+### Get annotation data for module given parent node index ----------------
 
 get_anno_data <- function(
   R,
@@ -68,6 +115,7 @@ get_anno_data <- function(
   sun_df
 }
 
+### Assign colors to different platforms  ----------------
 
 get_plat_colors <- function(
   R,
@@ -76,6 +124,7 @@ get_plat_colors <- function(
   mapply(function(x) R$col_vector[which(R$platform == x)], plat_list)
 }
 
+### Convert dendrogram to adjacency matrix for visualization  ----------------
 
 dend_to_adj_mat <- function(
   hclust_obj
@@ -98,6 +147,7 @@ dend_to_adj_mat <- function(
   adj_mat
 }
 
+### Get indices of each node in dendrogram structure  ----------------
 
 get_dend_indices <- function(R,number, indices){
   me <- R$HCL$merge
@@ -115,6 +165,7 @@ get_dend_indices <- function(R,number, indices){
   indices
 }
 
+### Create network view of module ----------------
 
 cluster_net <- function(
   R,
@@ -154,8 +205,34 @@ cluster_net <- function(
   network
 }
 
+### Create dendrogram view of data ----------------
 
+plot_dend <- function(
+  R,
+  order_coords
+){
+  
+  dend_G <- graph_from_adjacency_matrix(dend_to_adj_mat(R$HCL)) 
+  es <- as.data.frame(get.edgelist(dend_G))
+  
+  dend_network <- 
+    plot_ly(x = ~order_coords$x,
+            y = ~order_coords$y) %>% 
+    add_segments(data = data.frame(
+      x = c(order_coords$x[es$V1], order_coords$x[es$V2]),
+      xend = c(order_coords$x[es$V2],order_coords$x[es$V2]), 
+      y = c(order_coords$y[es$V1], order_coords$y[es$V1]), 
+      yend = c(order_coords$y[es$V1], order_coords$y[es$V2])),
+      x = ~x,xend = ~xend,y = ~y,yend = ~yend,
+      mode='lines',color = I('black'),size = I(1), alpha = 0.5)%>%
+    add_trace(type='scatter',
+              mode = "markers",
+              text = ~R$labels,
+              marker = list(color = R$colors))
+  dend_network
+}
 
+##################################################################
 
 
 
