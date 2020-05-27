@@ -11,7 +11,7 @@ if(length(args)<3){
   phen_loc = which(args == "--phenotypes")
   if ("--confounders" %in% args){
     confounder_loc = which(args == "--confounders")
-    phenotypes = args[(phen_loc+1):confounder_loc]
+    phenotypes = args[(phen_loc+1):(confounder_loc-1)]
     confounders = args[(confounder_loc+1):length(args)]
   }
   else{

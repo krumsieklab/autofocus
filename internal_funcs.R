@@ -282,7 +282,7 @@ make_R <- function(
   sample_data <- data.frame(colData(SE))
   mol_data <- data.frame(rowData(SE))
   R <- initialize(data_mat, sample_data, mol_data) %>% 
-    find_sig_clusts(phenotype, confounders, cores, nrand = 10)
+    find_sig_clusts(phenotype, confounders, cores, nrand = 1000)
   if(save_file){
     save(R, file = filename)
   }
