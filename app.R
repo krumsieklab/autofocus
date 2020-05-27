@@ -1,16 +1,8 @@
 library(shiny)
 library(plotly)
-library(ggdendro)
-library(igraph)
-library(igraphdata)
-library(gridExtra)
 source("internal_funcs.R")
-library(tictoc)
-library(networkD3)
 library(htmlwidgets)
 library(dendextend)
-
-
 
 ui <- fluidPage(
   titlePanel("AutoFocus Results"),
@@ -135,9 +127,7 @@ output$clust <- renderPlotly({
   net
 })
   
-  
-    
-  ### Barplots ###
+  ### sunburst plot ###
   output$barplots <- renderPlotly({
     axis <- list(
       
@@ -172,8 +162,6 @@ output$clust <- renderPlotly({
   })
 
 }
-
-
 
 shinyApp(ui, server)
 

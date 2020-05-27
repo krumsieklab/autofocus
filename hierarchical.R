@@ -102,7 +102,7 @@ find_sig_clusts <- function(R, outcome, confounders, cores = 1){
   # - nrand=100000, 40 cores, 135184.517 sec elapsed (37.5h)
   
   # parameters
-  nrand <- 50
+  nrand <- 1000
   mc.cores <- cores
   # safe parallelization
   
