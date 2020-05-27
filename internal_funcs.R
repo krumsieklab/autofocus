@@ -1,12 +1,27 @@
 ### internal functions
-library(dendextend)
-library(magrittr)
-library(parallel)
-library(foreach)
-library(RColorBrewer)
-library(plotly)
+suppressPackageStartupMessages(library(dendextend))
+suppressPackageStartupMessages(library(magrittr))
+suppressPackageStartupMessages(library(parallel))
+suppressPackageStartupMessages(library(foreach))
+suppressPackageStartupMessages(library(RColorBrewer))
+suppressPackageStartupMessages(library(plotly))
+suppressPackageStartupMessages(library(SummarizedExperiment))
+suppressPackageStartupMessages(library(shiny))
 
-### Initialize R structure from raw data and sample and molecule annotations  ----------------
+
+#' initialize
+#' 
+#' Takes as input a data matrix, annotations on the samples and annotations on the molecules
+#' and creates a list structure, R with the hierarchical clustering structure and cluster informations
+#'
+
+#' @param data.matrix Matrix with samples as rows and biomolecules as columns
+#' @param sample.data Matrix of annotation data of samples
+#' @param mol.data Matrix of annotation data of biomolecules
+#' 
+#' @return R struct with the data matrix, correlation matrix, 
+#' sample and molecular annotations, hierarchical structure, cluster membership
+#' node order within the hierarchical structure and a color vector for the platforms
 
 initialize <- function(
   data.matrix, # Matrix of raw data (samples * nodes)
@@ -29,9 +44,22 @@ initialize <- function(
   R
 }
 
-### Use BIC to determine color of node corresponding to source of significance  ----------------
-
-get_node_color <- function(R, i, signif){
+#' get_node_color
+#' 
+#' Gets the color of the nodes within the hierarchical tree based on 
+#' BIC and p-value
+#'
+#' @param R R struct
+#' @param i index of module we are coloring
+#' @param signif Is the module i significant?
+#' 
+#' @return color of node i 
+#
+get_node_color <- function(
+  R,
+  i,
+  signif
+){
   hc <- R$HCL
   internal_nodes <- dim(hc$merge)[1]
   if (i %in% signif[!is.na(signif)]){
@@ -48,14 +76,14 @@ get_node_color <- function(R, i, signif){
       ## Children are significant
       if(R$pvals[child1] < 0.05 & R$pvals[child2] < 0.05){
         
-        if (R$BIC[i] < R$BIC[child1] & R$BIC[i]<R$BIC[child2]) return("purple") else return("orange")
+        if (R$BIC[[i]] < R$BIC[[child1]] & R$BIC[[i]]<R$BIC[[child2]]) return("purple") else return("orange")
       }
       
       ## One child is significant
       else {
         sig_child <- if (R$pvals[child1] < R$pvals[child2]) child1 else child2
         
-        if(R$BIC[i] < R$BIC[sig_child]) return("purple") else return("orange")
+        if(R$BIC[[i]] < R$BIC[[sig_child]]) return("purple") else return("orange")
       }
     }
   }
@@ -64,16 +92,37 @@ get_node_color <- function(R, i, signif){
   }
 }
 
-### Get labels for nodes  ----------------
-
-get_node_label <- function(R, i){
+#' get_node_label
+#' 
+#' Gets the label of a node
+#' the label is the molecule name if the node is a leaf
+#' the label is the BIC and p-value if the node is internal
+#'
+#' @param R R struct
+#' @param i index of module we are labeling
+#' 
+#' @return label of node i 
+#' 
+get_node_label <- function(
+  R, 
+  i
+){
   internal_nodes <- dim(R$HCL$merge)[1]
   if (i > (internal_nodes)) return(R$HCL$labels[(i - internal_nodes)])
-  else return(paste("BIC: ", round( R$BIC[i], digits = 3), ", p-value: ", R$pvals[i]))
+  else return(paste("BIC: ", round( R$BIC[[i]], digits = 3), ", p-value: ", R$pvals[i]))
 }
 
-### Get the members of a module given parent node index  ----------------
-
+#' get_members
+#' 
+#' Recursively collects the indices of 
+#' leaves that are descendents of a module
+#'
+#' @param R R struct
+#' @param i index of module we are finding the members of
+#' @param cl vector to collect node indices
+#' 
+#' @return vector of indices of leaves in a module 
+#' 
 get_members <- function(
   R,
   i,
@@ -89,14 +138,30 @@ get_members <- function(
   return(c(cl,get_members(R,x[1]),get_members(R,x[2])))
 }
 
+#' abs_cor_dist
+#' 
+#' Calculates distance matrix of data based on correlation value
+#'
+#' @param R R struct
+#' 
+#' @return Distance matrix made up of 1- the absolution value of the correlation matrix
+#' 
 abs_cor_dist <- function(
   R
 ){
   as.dist((1-abs(R$C))) # abs correlation
 }
 
-### Get annotation data for module given parent node index ----------------
-
+#' get_anno_data
+#' 
+#' Gets the annotation data of nodes in a module
+#' and structures it for a sunburst plot
+#'
+#' @param R R struct
+#' @param i index of module we are annotating
+#' 
+#' @return dataframe with labels, parents, and values for sunburst plot
+#' 
 get_anno_data <- function(
   R,
   i
@@ -115,8 +180,15 @@ get_anno_data <- function(
   sun_df
 }
 
-### Assign colors to different platforms  ----------------
-
+#' get_plat_colors
+#' 
+#' Assign a unique color to each platform in our dataset
+#'
+#' @param R R struct
+#' @param plat_list lis of platforms in our data
+#' 
+#' @return vector of colors corresponding to each platform
+#' 
 get_plat_colors <- function(
   R,
   plat_list
@@ -124,7 +196,14 @@ get_plat_colors <- function(
   mapply(function(x) R$col_vector[which(R$platform == x)], plat_list)
 }
 
-### Convert dendrogram to adjacency matrix for visualization  ----------------
+#' get_plat_colors
+#' 
+#' Convert dendrogram to adjacency matrix for visualization
+#'
+#' @param hclust_obj the hclust object to convert
+#' 
+#' @return an adjacency matrix of the dendrogram where each parent has an edge with its children
+#' 
 
 dend_to_adj_mat <- function(
   hclust_obj
@@ -147,9 +226,21 @@ dend_to_adj_mat <- function(
   adj_mat
 }
 
-### Get indices of each node in dendrogram structure  ----------------
-
-get_dend_indices <- function(R,number, indices){
+#' get_dend_indices
+#' 
+#' Recursively finds the indices of each node in the dendrograms "merge" object 
+#'
+#' @param R R struct
+#' @param number number of the split in the dendrogram
+#' @param indices list to build the indices
+#' 
+#' @return the indices of nodes in R's hclust object
+#' 
+get_dend_indices <- function(
+  R,
+  number, 
+  indices
+){
   me <- R$HCL$merge
   
   #Leaf case
@@ -165,7 +256,50 @@ get_dend_indices <- function(R,number, indices){
   indices
 }
 
-### Create network view of module ----------------
+#' make_R
+#' 
+#' Wrapper function taking in preprocessed data, outputting significantly labelled dendrogram
+#'
+#' @param SE SummarizedExperiment object with preprocessed data
+#' @param phenotype name of the phenotype we are testing for association
+#' @param confounders vector of confounder names
+#' @param save_file do you want to save the R struct?
+#' @param filename name of file if save_file is true
+#' @param cores number of cores to use to run algorithm
+#' 
+#' @return R struct with significance data to be passed into shiny app
+#' 
+
+make_R <- function(
+  SE,
+  phenotype,
+  confounders,
+  save_file = F,
+  filename = "outfile.rmd",
+  cores = 7
+){
+  data_mat <- t(assay(SE))
+  sample_data <- data.frame(colData(SE))
+  mol_data <- data.frame(rowData(SE))
+  R <- initialize(data_mat, sample_data, mol_data) %>% 
+    find_sig_clusts(phenotype, confounders, cores, nrand = 10)
+  if(save_file){
+    save(R, file = filename)
+  }
+  R
+}
+
+##################################################################
+
+#' cluster_net
+#' 
+#' Create network view of module using minimum-spanning tree method
+#'
+#' @param R R struct
+#' @param i index of parent of module to make network view
+#' 
+#' @return network which is a plotly network of the module
+#' 
 
 cluster_net <- function(
   R,
@@ -205,7 +339,16 @@ cluster_net <- function(
   network
 }
 
-### Create dendrogram view of data ----------------
+#' plot_dend
+#' 
+#' Create dendrogram view of data
+#'
+#' @param R R struct
+#' @param order_coords coordinates of points in plot
+#' 
+#' @return dend_network which is a plotly network view of the dendrogram
+#' 
+
 
 plot_dend <- function(
   R,

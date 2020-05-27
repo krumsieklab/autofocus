@@ -1,8 +1,3 @@
-source(codes.makepath("autofocus/internal_funcs.R"))
-library(shiny)
-library(plotly)
-library(dendextend)
-
 ui <- fluidPage(
   titlePanel("AutoFocus Results"),
 
@@ -16,7 +11,9 @@ ui <- fluidPage(
 
 
 server <- function(input, output) {
-  R <- R_list[[which(phenotypes == input$outcome)]]
+  if (length(phenotypes)>1){
+    R <- R_list[[which(phenotypes == input$outcome)]]
+  }
   dend_xy <- R$HCL %>% as.dendrogram %>%get_nodes_xy()
   order_coords <- data.frame(index = R$order, 
                              x = round(dend_xy[,1], digits = 10), 
@@ -145,5 +142,4 @@ server <- function(input, output) {
 }
 
 shinyApp(ui, server)
-
 
