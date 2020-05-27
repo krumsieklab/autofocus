@@ -24,23 +24,6 @@ make_R <- function(
 }
 
 
-
-# If we want significance test to be performed
-
-# after this, only R is ever needed, every function should add intermediate results to R
-
-# s <- comp_size_of_cache(R)
-# if (s <= limit) {
-#   # size ok, we can cache
-#   R <- R %>% 
-#     cache() %>% 
-#     TVM(FUN=cluster_net_cached) # make video
-# } else {
-#   # can't make the cache
-#   R <- TVM(R, FUN=cluster_net)
-# }
-
-
 ##################################################################
 
 
