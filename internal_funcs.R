@@ -63,7 +63,7 @@ get_node_color <- function(
   hc <- R$HCL
   internal_nodes <- dim(hc$merge)[1]
   if (i %in% signif[!is.na(signif)]){
-    if (i > (internal_nodes)) return('blue')
+    if (i > (internal_nodes)) return(R$node_color)
     else {
       
       children <- hc$merge[i,]
@@ -71,19 +71,19 @@ get_node_color <- function(
       child2 <- if (children[2]<0) (internal_nodes + abs(children[2])) else children[2]
       
       ## Children aren't significant, combination is
-      if (R$pvals[child1] > 0.05 & R$pvals[child2] > 0.05) return("purple")
+      if (R$pvals[child1] > 0.05 & R$pvals[child2] > 0.05) return(R$node_color)
       
       ## Children are significant
       if(R$pvals[child1] < 0.05 & R$pvals[child2] < 0.05){
         
-        if (R$BIC[[i]] < R$BIC[[child1]] & R$BIC[[i]]<R$BIC[[child2]]) return("purple") else return("orange")
+        if (R$BIC[[i]] < R$BIC[[child1]] & R$BIC[[i]]<R$BIC[[child2]]) return(R$node_color) else return(R$node_color_light)
       }
       
       ## One child is significant
       else {
         sig_child <- if (R$pvals[child1] < R$pvals[child2]) child1 else child2
         
-        if(R$BIC[[i]] < R$BIC[[sig_child]]) return("purple") else return("orange")
+        if(R$BIC[[i]] < R$BIC[[sig_child]]) return(R$node_color) else return(R$node_color_light)
       }
     }
   }
@@ -274,6 +274,8 @@ make_R <- function(
   SE,
   phenotype,
   confounders,
+  node_color,
+  node_color_light,
   save_file = F,
   filename = "outfile.rmd",
   cores = 7
@@ -286,6 +288,9 @@ make_R <- function(
   if(save_file){
     save(R, file = filename)
   }
+  R$phenotype = phenotype
+  R$node_color = node_color
+  R$node_color_light = node_color_light
   R
 }
 
@@ -371,7 +376,7 @@ plot_dend <- function(
     add_trace(type='scatter',
               mode = "markers",
               text = ~R$labels,
-              marker = list(color = R$colors))
+              marker = list(color = "black"))#list(color = R$colors))
   dend_network
 }
 
