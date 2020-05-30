@@ -35,7 +35,7 @@ if (length(phenotypes)==1){
   }
   R_list <- mapply(function(i) make_R(SE, phenotypes[1], confounders, node_colors[i], node_colors_light[i]), 
                    1:length(phenotypes))
-  save(R_list, filename= "results_list.rmd")
+  save(R_list, file = "results_list.rmd")
 }
 
 

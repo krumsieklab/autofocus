@@ -58,12 +58,14 @@ initialize <- function(
 get_node_color <- function(
   R,
   i,
-  signif
+  signif,
+  node_color,
+  node_color_light
 ){
   hc <- R$HCL
   internal_nodes <- dim(hc$merge)[1]
   if (i %in% signif[!is.na(signif)]){
-    if (i > (internal_nodes)) return(R$node_color)
+    if (i > (internal_nodes)) return(node_color)
     else {
       
       children <- hc$merge[i,]
@@ -71,19 +73,19 @@ get_node_color <- function(
       child2 <- if (children[2]<0) (internal_nodes + abs(children[2])) else children[2]
       
       ## Children aren't significant, combination is
-      if (R$pvals[child1] > 0.05 & R$pvals[child2] > 0.05) return(R$node_color)
+      if (R$pvals[child1] > 0.05 & R$pvals[child2] > 0.05) return(node_color)
       
       ## Children are significant
       if(R$pvals[child1] < 0.05 & R$pvals[child2] < 0.05){
         
-        if (R$BIC[[i]] < R$BIC[[child1]] & R$BIC[[i]]<R$BIC[[child2]]) return(R$node_color) else return(R$node_color_light)
+        if (R$BIC[[i]] < R$BIC[[child1]] & R$BIC[[i]]<R$BIC[[child2]]) return(node_color) else return(node_color_light)
       }
       
       ## One child is significant
       else {
         sig_child <- if (R$pvals[child1] < R$pvals[child2]) child1 else child2
         
-        if(R$BIC[[i]] < R$BIC[[sig_child]]) return(R$node_color) else return(R$node_color_light)
+        if(R$BIC[[i]] < R$BIC[[sig_child]]) return(node_color) else return(node_color_light)
       }
     }
   }
@@ -278,19 +280,17 @@ make_R <- function(
   node_color_light,
   save_file = F,
   filename = "outfile.rmd",
-  cores = 7
+  cores = 6
 ){
   data_mat <- t(assay(SE))
   sample_data <- data.frame(colData(SE))
   mol_data <- data.frame(rowData(SE))
   R <- initialize(data_mat, sample_data, mol_data) %>% 
-    find_sig_clusts(phenotype, confounders, cores, nrand = 1000)
+    find_sig_clusts(phenotype, confounders, cores, node_color, node_color_light, nrand = 50)
   if(save_file){
     save(R, file = filename)
   }
   R$phenotype = phenotype
-  R$node_color = node_color
-  R$node_color_light = node_color_light
   R
 }
 
