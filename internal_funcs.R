@@ -4,9 +4,7 @@ suppressPackageStartupMessages(library(magrittr))
 suppressPackageStartupMessages(library(parallel))
 suppressPackageStartupMessages(library(foreach))
 suppressPackageStartupMessages(library(RColorBrewer))
-suppressPackageStartupMessages(library(plotly))
 suppressPackageStartupMessages(library(SummarizedExperiment))
-suppressPackageStartupMessages(library(shiny))
 
 
 #' initialize
@@ -286,7 +284,7 @@ make_R <- function(
   sample_data <- data.frame(colData(SE))
   mol_data <- data.frame(rowData(SE))
   R <- initialize(data_mat, sample_data, mol_data) %>% 
-    find_sig_clusts(phenotype, confounders, cores, node_color, node_color_light, nrand = 50)
+    find_sig_clusts(phenotype, confounders, cores, node_color, node_color_light, nrand = 1000)
   if(save_file){
     save(R, file = filename)
   }
@@ -376,7 +374,7 @@ plot_dend <- function(
     add_trace(type='scatter',
               mode = "markers",
               text = ~R$labels,
-              marker = list(color = "black"))#list(color = R$colors))
+              marker = list(color = R$colors))
   dend_network
 }
 

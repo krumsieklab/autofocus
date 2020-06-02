@@ -1,3 +1,6 @@
+suppressPackageStartupMessages(library(plotly))
+suppressPackageStartupMessages(library(shiny))
+source(codes.makepath("autofocus/internal_funcs.R"))
 ui <- fluidPage(
   titlePanel("AutoFocus Results"),
 
