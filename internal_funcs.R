@@ -33,7 +33,7 @@ initialize <- function(
   R$HCL <- R %>% abs_cor_dist() %>% hclust(method = "average")
   R$order <- get_dend_indices(R, dim(R$HCL$merge)[1], c())
   
-  
+  R$platforms = unique(R$annos$platform)
   R$clusts <- lapply(1:dim(R$HCL$merge)[1], function(x) get_members(R, x))
   qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
   R$col_vector = unlist(mapply(brewer.pal, 
@@ -166,15 +166,15 @@ get_anno_data <- function(
   R,
   i
 ){
-  mat <- subset( R$annos, select = -name )
+  mat <- subset( R$annos[R$clusts[[i]],], select = -name )
   labels <- c()
   parents <- c()
   values <- c()
   for (i in 1:length(colnames(mat))){
-    categories <- unique(mat[,i][!is.na(mat[,i])])
-    labels <- c(labels, colnames(mat)[i], categories)
-    parents <- c(parents, "", rep(colnames(mat)[i], times = length(categories)))
-    values <- c(values, 0, table(mat[,i])[categories])
+    categories <- unique(mat[!is.na(mat)])
+    labels <- c(labels, colnames(mat), categories)
+    parents <- c(parents, "", rep(colnames(mat), times = length(categories)))
+    values <- c(values, 0, table(mat)[categories])
   }
   sun_df <- data.frame(labels, parents, values)
   sun_df
@@ -338,7 +338,7 @@ cluster_net <- function(
                            mode='lines',color = I('black'),size = I(1), alpha = 0.5) %>% 
               add_trace(type = "scatter",
                         mode = "markers", text = names, hoverinfo = "text",
-                        marker = list(get_plat_colors(R, platforms)))
+                        marker = list(color = get_plat_colors(R, platforms)))
   network
 }
 
