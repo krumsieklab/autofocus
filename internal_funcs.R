@@ -348,6 +348,7 @@ cluster_net <- function(
 #'
 #' @param R R struct
 #' @param order_coords coordinates of points in plot
+#' @param i index of selected node, default NA
 #' 
 #' @return dend_network which is a plotly network view of the dendrogram
 #' 
@@ -355,12 +356,14 @@ cluster_net <- function(
 
 plot_dend <- function(
   R,
-  order_coords
+  order_coords,
+  i = NA
 ){
   
   dend_G <- graph_from_adjacency_matrix(dend_to_adj_mat(R$HCL)) 
   es <- as.data.frame(get.edgelist(dend_G))
-  
+  colors <- R$colors
+  colors[i] <- "yellow"
   dend_network <- 
     plot_ly(x = ~order_coords$x,
             y = ~order_coords$y) %>% 
@@ -374,7 +377,7 @@ plot_dend <- function(
     add_trace(type='scatter',
               mode = "markers",
               text = ~R$labels,
-              marker = list(color = R$colors))
+              marker = list(color = colors))
   dend_network
 }
 
