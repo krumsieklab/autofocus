@@ -20,23 +20,23 @@ source(codes.makepath("autofocus/ModuleTesting.R"))
 #     }
 # }
 
-SE = ADNI_platforms
-phenotypes = c("WholeBrain", "ADAS.Cog13")
-confounders = c("Sex","Age","Education")
-
-node_colors=c('red','darkorange','purple','green','blue')
-node_colors_light=c('pink','orange','mediumpurple','lightgreen','lightblue')
-
-if (length(phenotypes)==1){
-  R <- make_R(SE, phenotypes, confounders, 'red', 'pink', save_file = T, filename = paste(phenotype,".rmd"))
-}else{
-  for (phenotype in phenotypes){
-    
-  }
-  R_list <- mapply(function(i) make_R(SE, phenotypes[1], confounders, node_colors[i], node_colors_light[i]), 
-                   1:length(phenotypes))
-  save(R_list, file = "results_list.rmd")
-}
+# SE = ADNI_platforms
+# phenotypes = c("WholeBrain", "ADAS.Cog13")
+# confounders = c("Sex","Age","Education")
+# 
+# node_colors=c('red','darkorange','purple','green','blue')
+# node_colors_light=c('pink','orange','mediumpurple','lightgreen','lightblue')
+# 
+# if (length(phenotypes)==1){
+#   R <- make_R(SE, phenotypes, confounders, 'red', 'pink', save_file = T, filename = paste(phenotype,".rmd"))
+# }else{
+#   for (phenotype in phenotypes){
+#     
+#   }
+#   R_list <- mapply(function(i) make_R(SE, phenotypes[1], confounders, node_colors[i], node_colors_light[i]), 
+#                    1:length(phenotypes))
+#   save(R_list, file = "results_list.rmd")
+# }
 
 
 
