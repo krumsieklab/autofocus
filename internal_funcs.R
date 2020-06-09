@@ -285,10 +285,10 @@ make_R <- function(
   mol_data <- data.frame(rowData(SE))
   R <- initialize(data_mat, sample_data, mol_data) %>% 
     find_sig_clusts(phenotype, confounders, cores, node_color, node_color_light, nrand = 1000)
+  R$phenotypes = phenotype
   if(save_file){
     save(R, file = filename)
   }
-  R$phenotype = phenotype
   R
 }
 

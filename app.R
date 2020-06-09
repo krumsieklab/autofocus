@@ -5,7 +5,7 @@ ui <- fluidPage(
   titlePanel("AutoFocus Results"),
 
   selectInput(inputId = "outcome", label = "Select Disease Phenotype",
-              choices = c("No outcome"),
+              choices = c("No outcome", R$phenotypes),
               selected = "No outcome"), #Outcome
 
       fluidRow(mainPanel("Module Browser", plotlyOutput("dendro"), plotlyOutput("clust"))),
@@ -14,9 +14,7 @@ ui <- fluidPage(
 
 
 server <- function(input, output) {
-  # if (length(phenotypes)>1){
-  #   R <- R_list[[which(phenotypes == input$outcome)]]
-  # }
+
   dend_xy <- R$HCL %>% as.dendrogram %>%get_nodes_xy()
   order_coords <- data.frame(index = R$order, 
                              x = round(dend_xy[,1], digits = 10), 
