@@ -18,14 +18,13 @@ find_sig_clusts <- function(
   R, 
   phenotype, 
   confounders,
-  cores = 1, 
   node_color,
   node_color_light,
+  cores = 1, 
   nrand = 1000)
   {
     if (cores>1) doParallel::registerDoParallel(cores=cores)
   
-    #### find all valid clusters and score them ----
     PHEN <- R$samples[[phenotype]]
     ## calculate p-values
     all_nodes <- nnodes(R$HCL)
@@ -61,11 +60,10 @@ find_sig_clusts <- function(
     # determine significant nodes to be colored
     signif <- which(R$pvals<0.05)
     
-    R$colors <- mapply(function(i) get_node_color(R, i, signif, node_color, node_color_light), 1:all_nodes)
-    R$labels <- mapply(function(i) get_node_label(R, i), 1:all_nodes)
+    colors <- mapply(function(i) get_node_color(R, i, signif, node_color, node_color_light), 1:all_nodes)
+    labels <- mapply(function(i) get_node_label(R, i), 1:all_nodes)
   
-    to_remove <- c("data", "dist")
-    R[!(names(R) %in% to_remove)]  
+    list(R, colors, labels)
 }
 
 

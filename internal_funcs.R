@@ -6,7 +6,6 @@ suppressPackageStartupMessages(library(foreach))
 suppressPackageStartupMessages(library(RColorBrewer))
 suppressPackageStartupMessages(library(SummarizedExperiment))
 
-
 #' initialize
 #' 
 #' Takes as input a data matrix, annotations on the samples and annotations on the molecules
@@ -256,6 +255,26 @@ get_dend_indices <- function(
   indices
 }
 
+
+get_multi_colors <- function(
+  colors_list
+){
+  color_df <- as.data.frame(do.call(cbind, colors_list))
+  apply(color_df, 1, function(x) if (length(unique(x))>1) (return ("yellow")) else return('black'))
+}
+
+
+get_multi_labels <- function(
+  colors_list,
+  phenotypes
+){
+  color_df <- as.data.frame(do.call(cbind, colors_list))
+  apply(color_df, 1, function(x) {
+    if(length(which(x != "black")) == 0) (return(NULL)) else return(paste(phenotypes[which(x != "black")]))
+       })
+  
+}
+
 #' make_R
 #' 
 #' Wrapper function taking in preprocessed data, outputting significantly labelled dendrogram
@@ -263,6 +282,8 @@ get_dend_indices <- function(
 #' @param SE SummarizedExperiment object with preprocessed data
 #' @param phenotype name of the phenotype we are testing for association
 #' @param confounders vector of confounder names
+#' @param node_color node coloring of most significant clusters
+#' @param node_color_light node coloring of less significant clusters
 #' @param save_file do you want to save the R struct?
 #' @param filename name of file if save_file is true
 #' @param cores number of cores to use to run algorithm
@@ -283,12 +304,67 @@ make_R <- function(
   data_mat <- t(assay(SE))
   sample_data <- data.frame(colData(SE))
   mol_data <- data.frame(rowData(SE))
-  R <- initialize(data_mat, sample_data, mol_data) %>% 
-    find_sig_clusts(phenotype, confounders, cores, node_color, node_color_light, nrand = 1000)
+  R <- initialize(data_mat, sample_data, mol_data)
+  sig_clusts <- find_sig_clusts(R, phenotype, confounders, node_color, node_color_light, cores, nrand = 1000)
+  R <- sig_clusts[[1]]
+  R$colors <- sig_clusts[[2]]
+  R$labels <- sig_clusts[[3]]
+  R$phenotypes <- phenotype
+  to_remove <- c("data", "dist")
+  R <- R[!(names(R) %in% to_remove)]
   if(save_file){
     save(R, file = filename)
   }
-  R$phenotype = phenotype
+  
+  R
+}
+
+
+
+#' make_R_multi
+#' 
+#' Wrapper function taking in preprocessed data, outputting significantly labelled dendrogram of multiple phenotypes
+#'
+#' @param SE SummarizedExperiment object with preprocessed data
+#' @param phenotypes name of the phenotypes we are testing for association
+#' @param confounders vector of confounder names
+#' @param save_file do you want to save the R struct?
+#' @param filename name of file if save_file is true
+#' @param cores number of cores to use to run algorithm
+#' 
+#' @return R struct with significance data to be passed into shiny app
+#' 
+
+make_R_multi <- function(
+  SE,
+  phenotypes,
+  confounders,
+  save_file = F,
+  filename = "outfile.rmd",
+  cores = 6
+){
+  node_colors=c('red','darkorange','purple','green','blue')
+  node_colors_light=c('pink','orange','mediumpurple','lightgreen','lightblue')
+  
+  data_mat <- t(assay(SE))
+  sample_data <- data.frame(colData(SE))
+  mol_data <- data.frame(rowData(SE))
+  R <- initialize(data_mat, sample_data, mol_data)
+  for (i in 1:length(phenotypes)){
+    sig_clusts <- find_sig_clusts(R, phenotypes[i], confounders, node_colors[i], node_colors_light[i], cores, nrand = 10)
+    R <- sig_clusts[[1]]
+    R$colors[[i]] <- sig_clusts[[2]]
+    R$labels[[i]] <- sig_clusts[[3]]
+  }
+  R$phenotypes = c(phenotypes, "all")
+  R$labels[[(length(phenotypes)+1)]] <- get_multi_labels(R$colors, R$phenotypes)
+  R$colors[[(length(phenotypes)+1)]] <- get_multi_colors(R$colors)
+
+  to_remove <- c("data", "dist")
+  R <- R[!(names(R) %in% to_remove)]
+  if(save_file){
+    save(R, file = filename)
+  }
   R
 }
 
@@ -347,6 +423,7 @@ cluster_net <- function(
 #' Create dendrogram view of data
 #'
 #' @param R R struct
+#' @param phenotype which phenotype coloring to add to nodes
 #' @param order_coords coordinates of points in plot
 #' @param i index of selected node, default NA
 #' 
@@ -356,13 +433,23 @@ cluster_net <- function(
 
 plot_dend <- function(
   R,
+  phenotype,
   order_coords,
   i = NA
 ){
-  
+  print(phenotype)
   dend_G <- graph_from_adjacency_matrix(dend_to_adj_mat(R$HCL)) 
   es <- as.data.frame(get.edgelist(dend_G))
-  colors <- R$colors
+  if (phenotype == "No outcome"){
+    colors = rep("black", length(R$colors))
+    labels = NA
+  }
+  else{
+    phen_ind <- which(R$phenotypes == phenotype)
+    colors <- R$colors[[phen_ind]]
+    labels <- R$labels[[phen_ind]]
+  }
+  print(colors)
   colors[i] <- "yellow"
   dend_network <- 
     plot_ly(x = ~order_coords$x,
@@ -376,7 +463,7 @@ plot_dend <- function(
       mode='lines',color = I('black'),size = I(1), alpha = 0.5)%>%
     add_trace(type='scatter',
               mode = "markers",
-              text = ~R$labels,
+              text = labels,
               marker = list(color = colors))
   dend_network
 }

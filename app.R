@@ -5,7 +5,7 @@ ui <- fluidPage(
   titlePanel("AutoFocus Results"),
 
   selectInput(inputId = "outcome", label = "Select Disease Phenotype",
-              choices = c("No outcome"),
+              choices = c("No outcome", R$phenotypes),
               selected = "No outcome"), #Outcome
 
       fluidRow(mainPanel("Module Browser", plotlyOutput("dendro"), plotlyOutput("clust"))),
@@ -14,25 +14,22 @@ ui <- fluidPage(
 
 
 server <- function(input, output) {
-  # if (length(phenotypes)>1){
-  #   R <- R_list[[which(phenotypes == input$outcome)]]
-  # }
   dend_xy <- R$HCL %>% as.dendrogram %>%get_nodes_xy()
   order_coords <- data.frame(index = R$order, 
                              x = round(dend_xy[,1], digits = 10), 
                              y = round(dend_xy[,2], digits = 10)) 
   
   order_coords <- order_coords[order(order_coords$index),]
+  react = reactiveValues(n = NA, phenotype = NA)
   
-  
-  selected_node = reactiveValues(n = NA)
+  observeEvent(input$outcome, {
+    react$phenotype <- input$outcome})
   observeEvent(event_data("plotly_click"),{
     d<-event_data("plotly_click")
     if (d$y != 0){
-      selected_node$n = order_coords$index[which(order_coords$y ==d$y)]
+      react$n = order_coords$index[which(order_coords$y ==d$y)]
     }
     })
-  
   
   output$dendro <- renderPlotly({
     
@@ -60,16 +57,16 @@ server <- function(input, output) {
     #
     # ### Dendrogram ###
     
-    view_range <- match(R$clusts[as.double(selected_node$n)][[1]], R$HCL$order) 
+    view_range <- match(R$clusts[as.double(react$n)][[1]], R$HCL$order) 
     x <- c((min(view_range)-1),(max(view_range)+1))
-    y <- c(-0.1, order_coords[as.double(selected_node$n),3] + 1)
+    y <- c(-0.1, order_coords[as.double(react$n),3] + 1)
 
     x_axis$range <- x
     y_axis$range <- y
    
     
     dend_network<-plotly::layout(
-      plot_dend(R, order_coords, selected_node$n),
+      plot_dend(R, react$phenotype, order_coords, react$n),
       xaxis = x_axis,
       yaxis = y_axis,
       showlegend = F
@@ -93,12 +90,12 @@ server <- function(input, output) {
       linewidth = 2
     )
     
-    if (is.na(selected_node$n)){
+    if (is.na(react$n)){
       net = plotly_empty() %>% add_annotations(text = "Select a Cluster to View", showarrow = F) %>% layout(xaxis = axis, yaxis = axis)
     }
     else{
         net<-plotly::layout(
-        cluster_net(R, as.double(selected_node$n)),
+        cluster_net(R, as.double(react$n)),
         xaxis = axis,
         yaxis = axis,
         showlegend=F
@@ -120,7 +117,7 @@ server <- function(input, output) {
       linecolor = toRGB("black"),
       linewidth = 2
     )
-    if (is.na(selected_node$n)){
+    if (is.na(react$n)){
       sunburst = plotly_empty() %>% 
         add_annotations(text = "Select a Cluster for Annotation Details", showarrow = F) %>% 
         layout(xaxis = axis, yaxis = axis)
@@ -128,7 +125,7 @@ server <- function(input, output) {
     }
 
     else{
-      barplot_df <- get_anno_data(R, selected_node$n)
+      barplot_df <- get_anno_data(R, react$n)
       sunburst <- plot_ly(barplot_df, labels = ~labels, parents = ~parents, values = ~values,type = 'sunburst', branchvalues = 'remainder')
     }
     
@@ -139,7 +136,7 @@ server <- function(input, output) {
   )
 
   output$mytable = DT::renderDataTable({
-    R$annos[R$clusts[[selected_node$n]],]
+    R$annos[R$clusts[[react$n]],]
   })
 
 }
