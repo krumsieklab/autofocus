@@ -1,5 +1,6 @@
 suppressPackageStartupMessages(library(plotly))
 suppressPackageStartupMessages(library(shiny))
+suppressPackageStartupMessages(library(igraph))
 source(codes.makepath("autofocus/internal_funcs.R"))
 ui <- fluidPage(
   titlePanel("AutoFocus Results"),
@@ -137,7 +138,7 @@ server <- function(input, output) {
   )
 
   output$mytable = DT::renderDataTable({
-    R$annos[R$clusts[[selected_node$n]],]
+    data.frame(R$annos[R$clusts[[selected_node$n]],])
   })
 
 }

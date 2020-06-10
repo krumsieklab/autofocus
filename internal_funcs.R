@@ -171,10 +171,12 @@ get_anno_data <- function(
   parents <- c()
   values <- c()
   for (i in 1:length(colnames(mat))){
-    categories <- unique(mat[!is.na(mat)])
-    labels <- c(labels, colnames(mat), categories)
-    parents <- c(parents, "", rep(colnames(mat), times = length(categories)))
-    values <- c(values, 0, table(mat)[categories])
+    categories <- unique(mat[,i][!is.na(mat[,i])])
+    if (length(categories) != 0){
+      labels <- c(labels, colnames(mat)[i], categories)
+      parents <- c(parents, "", rep(colnames(mat)[i], times = length(categories)))
+      values <- c(values, 0, table(mat[,i])[categories])
+    }
   }
   sun_df <- data.frame(labels, parents, values)
   sun_df
