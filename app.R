@@ -1,7 +1,8 @@
 suppressPackageStartupMessages(library(plotly))
 suppressPackageStartupMessages(library(shiny))
 suppressPackageStartupMessages(library(igraph))
-source(codes.makepath("autofocus/internal_funcs.R"))
+source(codes.makepath("autofocus/Frontend_Modules.R"))
+
 ui <- fluidPage(
   titlePanel("AutoFocus Results"),
 
@@ -56,8 +57,8 @@ server <- function(input, output) {
       linewidth = 2
     )
 
-    #
-    # ### Dendrogram ###
+    
+    ### Dendrogram ###
     
     view_range <- match(R$clusts[as.double(selected_node$n)][[1]], R$HCL$order) 
     x <- c((min(view_range)-1),(max(view_range)+1))
