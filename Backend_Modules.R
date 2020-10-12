@@ -170,7 +170,7 @@ scoring_func_wrapper <- function(
     # Size of module less than degrees of freedom, no regularization
    return (score_regularized(pc_data, 
                             phenotype_vec, 
-                            R$samples[,confounders], 
+                            as.matrix(R$samples[,confounders]), 
                             dof,
                             family,
                             return_BIC))

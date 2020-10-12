@@ -9,11 +9,11 @@ suppressPackageStartupMessages(library(epicalc))
 suppressPackageStartupMessages(library(SummarizedExperiment))
 suppressPackageStartupMessages(library(glmnet))
 
-source("PreprocessQMDiab.R")
-source("ADNI_data_loading.R")
-source("Backend_Modules.R")
-source("internal_funcs.R")
-source("ModuleTesting.R")
+# source("PreprocessQMDiab.R")
+# source("ADNI_data_loading.R")
+# source("Backend_Modules.R")
+# source("internal_funcs.R")
+# source("ModuleTesting.R")
 
 
 
