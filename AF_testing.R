@@ -5,25 +5,14 @@ suppressPackageStartupMessages(library(magrittr))
 suppressPackageStartupMessages(library(parallel))
 suppressPackageStartupMessages(library(foreach))
 suppressPackageStartupMessages(library(cluster))
-suppressPackageStartupMessages(library(epicalc))
 suppressPackageStartupMessages(library(SummarizedExperiment))
 suppressPackageStartupMessages(library(glmnet))
 
-# source("PreprocessQMDiab.R")
-# source("ADNI_data_loading.R")
-# source("Backend_Modules.R")
-# source("internal_funcs.R")
-# source("ModuleTesting.R")
-
-
-
-score_method = "lm"
-#score_method = "pc"
-
-adjust_method = "holm"
-#adjust_method = "wy"
-
-cores = 6
+source("PreprocessQMDiab.R")
+source("ADNI_data_loading.R")
+source("Backend_Modules.R")
+source("internal_funcs.R")
+source("ModuleTesting.R")
 
 
 QD <- initialize(t(assay(all_platforms)), 
@@ -53,7 +42,7 @@ AD_results_lm <- find_sig_clusts(AD,
                               cores = cores)
 
 
-AD_results <- find_sig_clusts(AD, 
+AD_results_pc <- find_sig_clusts(AD, 
                               "ADAS.Cog13", c("Age", "Sex", "Education"), 
                               score_method = "pc", 
                               adjust_method = adjust_method,

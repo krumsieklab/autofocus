@@ -7,9 +7,8 @@ library(RCy3)
 library(igraph)
 library("dplyr")
 library("psych")
-
-mt.checkout("PACKAGE_200612")
-mt.quickload()
+library(MetaboTools)
+# Commit number 1030613ae4bc88ec4d98a466fe2251b70f60a5e8 10/10/20
 load(data.makepath("shareddata/QMDiab/qmdiab_2019_03_13.rda"))
 
 
@@ -52,9 +51,9 @@ preprocess_steps <- function(
   
   D_alone <-
 
-    mt_pre_filtermiss(D,metMax=0.2) %>%
+    mt_pre_filtermiss(D,met_max=0.2) %>%
     
-    mt_pre_filtermiss(sampleMax=0.1) %>%
+    mt_pre_filtermiss(sample_max=0.1) %>%
     
     mt_pre_norm_quot() %>%
     
@@ -64,7 +63,7 @@ preprocess_steps <- function(
     
     mt_pre_outliercorrection() %>% 
     
-    mt_pre_filtermiss(sampleMax=0.1) %>% 
+    mt_pre_filtermiss(sample_max=0.1) %>% 
     
     mt_pre_impute_knn() 
     
@@ -88,9 +87,9 @@ preprocess_IgA <- function(
   assay(D)[assay(D) == 0] <- NA
   
   D_alone <-
-    mt_pre_filtermiss(D, metMax=0.2) %>%
+    mt_pre_filtermiss(D, met_max=0.2) %>%
     
-    mt_pre_filtermiss(sampleMax=0.1) 
+    mt_pre_filtermiss(sample_max=0.1) 
   for (prot in IgA_prots){
     indices <- which(startsWith(rowData(D_alone)$name, prot))
     if (length(indices)!= 0){

@@ -223,7 +223,7 @@ score_regularized <- function(
   
   if(return_BIC){
     tLL <- gn$nulldev - deviance(gn)
-    k <- gn$df
+    k <- (dof - dim(confounders)[2])
     n <- gn$nobs
     BIC<-log(n)*k - tLL
     return(BIC)
