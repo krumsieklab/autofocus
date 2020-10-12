@@ -8,11 +8,11 @@ suppressPackageStartupMessages(library(cluster))
 suppressPackageStartupMessages(library(SummarizedExperiment))
 suppressPackageStartupMessages(library(glmnet))
 
-source("PreprocessQMDiab.R")
-source("ADNI_data_loading.R")
-source("Backend_Modules.R")
-source("internal_funcs.R")
-source("ModuleTesting.R")
+source(codes.makepath("autofocus/PreprocessQMDiab.R"))
+source(codes.makepath("ADNI_data_loading.R"))
+source(codes.makepath("Backend_Modules.R"))
+source(codes.makepath("internal_funcs.R"))
+source(codes.makepath("ModuleTesting.R"))
 
 
 QD <- initialize(t(assay(all_platforms)), 
