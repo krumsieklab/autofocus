@@ -9,8 +9,9 @@ library("dplyr")
 library("psych")
 library(MetaboTools)
 # Commit number 1030613ae4bc88ec4d98a466fe2251b70f60a5e8 10/10/20
-load(data.makepath("shareddata/QMDiab/qmdiab_2019_03_13.rda"))
-
+if (!exists('qmdiab')){
+  load(data.makepath("shareddata/QMDiab/qmdiab_2019_03_13.rda"))
+}
 
 repeats <- function(
   D,
