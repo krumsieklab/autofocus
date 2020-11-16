@@ -1,14 +1,15 @@
 suppressPackageStartupMessages(library(plotly))
 suppressPackageStartupMessages(library(shiny))
 suppressPackageStartupMessages(library(igraph))
+suppressPackageStartupMessages(library(dendextend))
 source(codes.makepath("autofocus/Frontend_Modules.R"))
 
 ui <- fluidPage(
-  titlePanel("AutoFocus Results"),
+  titlePanel("AutoFocus Run Results"),
 
-  selectInput(inputId = "outcome", label = "Select Disease Phenotype",
-              choices = c("No outcome", R$phenotypes),
-              selected = "No outcome"), #Outcome
+  # selectInput(inputId = "outcome", label = "Select Disease Phenotype",
+  #             choices = c("No outcome", R$phenotypes),
+  #             selected = "No outcome"), #Outcome
 
       fluidRow(mainPanel("Module Browser", plotlyOutput("dendro"), plotlyOutput("clust"))),
       fluidRow( plotlyOutput("barplots")),DT::dataTableOutput("mytable")

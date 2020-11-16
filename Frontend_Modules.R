@@ -145,6 +145,37 @@ cluster_net <- function(
   network
 }
 
+#### Convert dendrogram to adjacency matrix ####
+#' dend_to_adj_mat
+#' 
+#' Convert dendrogram to adjacency matrix for visualization
+#'
+#' @param hclust_obj the hclust object to convert
+#' 
+#' @return an adjacency matrix of the dendrogram where each parent has an edge with its children
+#' 
+
+dend_to_adj_mat <- function(
+  hclust_obj
+){
+  
+  adj_mat <- matrix(0L, nrow = (2*dim(hclust_obj$merge)[1])+1, ncol = (2*dim(hclust_obj$merge)[1])+1)
+  for(i in rev(1:dim(hclust_obj$merge)[1])){
+    parent <- i
+    right_index <- hclust_obj$merge[i,1]
+    if (right_index < 0){
+      right_index <- abs(right_index) + dim(hclust_obj$merge)[1]
+    }
+    left_index <- hclust_obj$merge[i,2]
+    if (left_index < 0){
+      left_index <- abs(left_index) + dim(hclust_obj$merge)[1]
+    }
+    adj_mat[i, right_index] <- 1
+    adj_mat[i, left_index] <- 1
+  }
+  adj_mat
+}
+
 
 #### Make list view ####
 
@@ -164,7 +195,7 @@ get_anno_data <- function(
   R,
   i
 ){
-  mat <- subset( R$annos[R$clusts[[i]],], select = -name )
+  mat <- subset( R$annos[R$clusts[[i]],], select = c(platform, SUPER_PATHWAY, SUB_PATHWAY))
   labels <- c()
   parents <- c()
   values <- c()

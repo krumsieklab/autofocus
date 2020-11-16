@@ -62,3 +62,54 @@ find_sig_clusts <- function(
     to_remove <- c("data", "dist")
     R[!(names(R) %in% to_remove)]  
 }
+
+#### Color Nodes ####
+#' get_node_color
+#' 
+#' Gets the color of the nodes within the hierarchical tree based on 
+#' BIC and p-value
+#'
+#' @param R R struct
+#' @param i index of module we are coloring
+#' @param signif Is the module i significant?
+#' 
+#' @return color of node i 
+#
+get_node_color <- function(
+  R,
+  i,
+  signif,
+  node_color,
+  node_color_light
+){
+  hc <- R$HCL
+  internal_nodes <- dim(hc$merge)[1]
+  if (i %in% signif[!is.na(signif)]){
+    if (i > (internal_nodes)) return(node_color)
+    else {
+      
+      children <- hc$merge[i,]
+      child1 <- if (children[1]<0) (internal_nodes + abs(children[1])) else children[1]
+      child2 <- if (children[2]<0) (internal_nodes + abs(children[2])) else children[2]
+      
+      ## Children aren't significant, combination is
+      if (R$pvals[child1] > 0.05 & R$pvals[child2] > 0.05) return(node_color)
+      
+      ## Children are significant
+      if(R$pvals[child1] < 0.05 & R$pvals[child2] < 0.05){
+        
+        if (R$BIC[[i]] < R$BIC[[child1]] & R$BIC[[i]]<R$BIC[[child2]]) return(node_color) else return(node_color_light)
+      }
+      
+      ## One child is significant
+      else {
+        sig_child <- if (R$pvals[child1] < R$pvals[child2]) child1 else child2
+        
+        if(R$BIC[[i]] < R$BIC[[sig_child]]) return(node_color) else return(node_color_light)
+      }
+    }
+  }
+  else{
+    return("black")
+  }
+}

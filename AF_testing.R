@@ -8,12 +8,22 @@ suppressPackageStartupMessages(library(cluster))
 suppressPackageStartupMessages(library(SummarizedExperiment))
 suppressPackageStartupMessages(library(glmnet))
 
+# Preprocess QMDiab data
 source(codes.makepath("autofocus/PreprocessQMDiab.R"))
-source(codes.makepath("ADNI_data_loading.R"))
-source(codes.makepath("Backend_Modules.R"))
-source(codes.makepath("internal_funcs.R"))
-source(codes.makepath("ModuleTesting.R"))
 
+# Preprocess ADNI data
+source(codes.makepath("autofocus/ADNI_data_loading.R"))
+source(codes.makepath("autofocus/Backend_Modules.R"))
+source(codes.makepath("autofocus/initialize.R"))
+source(codes.makepath("autofocus/ModuleTesting.R"))
+
+#set adjust_method 
+#wy for westfall young - takes forever
+#any other adjustment method that p.adjust takes
+adjust_method = "holm"
+
+# set number of cores
+cores = 6
 
 QD <- initialize(t(assay(all_platforms)), 
                    sample.data = colData(all_platforms),

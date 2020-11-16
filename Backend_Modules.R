@@ -17,42 +17,74 @@ abs_cor_dist <- function(
   as.dist((1-abs(R$C))) # abs correlation
 }
 
-
+## Get dendrogram ##
+#' get_dendro
+#' 
+#' Hierarchically clusters data in R
+#'
+#' @param R R struct
+#' @param method Hierarchical clustering method. If NA (default), get optimal choice of all clustering methods
+#' @param cores Number of cores to be used in this step
+#' 
+#' @return hclust object of dendrogram
+#' 
 get_dendro <- function(
   R,
   method = NA,
   cores = cores
 ){
+  
+  # Calculate distance metric
   dist_mat <- abs_cor_dist(R)
+  
+  # Hclust using defined method if not NA
   if (!(is.na(method))){
     return(hclust(dist_mat, method = method))
   }
+  
+  # Hclust using search over all clustering methods
   else {
     return(get_cluster_method(dist_mat, cores = cores))
   }
 }
 
-
-grid_search_clust <- function(
+## Get dendrogram from best clustering method ##
+#' get_cluster_method
+#' 
+#' Searches through all hierarchical clustering methods for one that
+#' results in a dendrogram with highest cophenetic correlation to original data mat
+#'
+#' @param dist_mat distance matrix
+#' @param cores Number of cores to be used in this step
+#' 
+#' @return hclust object of dendrogram
+#' 
+get_cluster_method <- function(
   dist_mat, 
   cores = 1
 ){
   
+  # Test values for agnes clustering function
   test_vals <- seq(0,1,by=0.05)
+
+  #For each test value, return correlation coefficient between distance matrix
+  # and cophenetic values of the resulting dendrogram using the flexible parameter
   flex_known_cors <- unlist(mclapply(test_vals, function(i){
     hc = as.hclust(cluster::agnes(dist_mat, diss = T,method = "flexible", par.method = i))
     cor(as.vector(as.dist(cophenetic(hc))), as.vector(dist_mat), method = "spearman")
   }, mc.cores = cores))
+  
   flex_known_data <- data.frame(flex_known_cors, test_vals,clustering_type = rep("flexible", length(flex_known_cors)))
   
-  
-  
+  #For each test value, return correlation coefficient between distance matrix
+  # and cophenetic values of the resulting dendrogram using the gaverage parameter
   gav_known_cors <- unlist(mclapply(test_vals, function(i){
     hc = as.hclust(cluster::agnes(dist_mat, diss = T,method = "gaverage", par.method = i))
     cor(as.vector(as.dist(cophenetic(hc))), as.vector(dist_mat), method = "spearman")
   }, mc.cores = cores))
   gav_known_data <- data.frame(gav_known_cors, test_vals, clustering_type = rep("gaverage", length(gav_known_cors)))
   
+  # Plot the values for each method
   known_data <- rbind(flex_known_data, gav_known_data)
   p<- ggplot(known_data) +geom_point(aes(x=test_vals, y=known_cors))
   print(p + 
@@ -64,6 +96,7 @@ grid_search_clust <- function(
           panel.background = element_rect(colour = "black") ) + 
           ggsci::scale_color_aaas())
   
+  # Return the highest correlated dendrogram 
   if (max(flex_known_cors)>max(gav_known_cors)){
     best_flex_ind <- which(flex_known_cors == max(flex_known_cors))
     return(as.hclust(cluster::agnes(dist_mat, 
@@ -82,6 +115,19 @@ grid_search_clust <- function(
 
 ## Linear Model Module ####
 
+## Degrees of Freedom ##
+#' get_dof
+#' 
+#' Calculates the degrees of freedom based on the phenotype vector
+#' If the phenotype is binary, degrees of freedom is the number of samples in the
+#' smaller group divided by 10 and the family is binomial
+#' 
+#' If the phenotype is continuous, degrees of freedom is n/10 and familty is "gaussian"
+#'
+#' @param phenotype_vec phenotype vector
+#' 
+#' @return Degrees of Freedom for linear model, family for linear model
+#' 
 get_dof <- function(
   phenotype_vec
 ){
@@ -99,6 +145,18 @@ get_dof <- function(
   return(list(dof, family))
 }
 
+## Lambda Calculation ##
+#' get_lambda
+#' 
+#' Calculates the best value for lambda to be used in a regularized model
+#' to maintain a certain degrees of freedom
+#' 
+#'
+#' @param data_mat Matrix of data
+#' @param dof Degrees of freedom
+#' 
+#' @return lambda value to be used in regularized linear model
+#' 
 get_lambda <- function(
   data_mat, 
   dof
@@ -111,7 +169,21 @@ get_lambda <- function(
   structure(opt$par, d = c(dfh = sum(sapply(d2,function(x) x/(x+opt$par))), df = dof))
 }
 
-
+## Module Scoring wrapper function ##
+#' scoring_func_wrapper
+#' 
+#' Wrapper to calculate raw p-value of the module formed by internal node i
+#' 
+#'
+#' @param i Dendrogram node index
+#' @param R R struct
+#' @param phenotype_vec Vector of sample phenotypes
+#' @param confounders Vector of confounder column names
+#' @param score_method Scoring method (either "lm" or "pc")
+#' @param return_BIC Boolean to return BIC instead of p-value
+#' 
+#' @return Unadjusted p-value of module formed at node i
+#' 
 scoring_func_wrapper <- function(
   i,
   R,
@@ -176,7 +248,21 @@ scoring_func_wrapper <- function(
                             return_BIC))
   }
 }
-  
+## Module Scoring Function ##
+#' score_regularized
+#' 
+#' Calculate raw p-value of linear model with input data and output phenotype vector
+#' 
+#'
+#' @param data Data of nodes in module being tested
+#' @param phenotype_vec Vector of sample phenotypes
+#' @param confounders Vector of confounder column names
+#' @param dof Degrees of freedom for model
+#' @param family Family for linear model to use
+#' @param return_BIC Boolean to return BIC instead of p-value
+#' 
+#' @return Unadjusted p-value of module
+#' 
 score_regularized <- function(
   data,
   phenotype_vec, 
@@ -186,6 +272,7 @@ score_regularized <- function(
   return_BIC
 ){
   
+  #Center data
   centered_dat <- scale(data, center = T, scale = F)
   
   full_data <- cbind(centered_dat, confounders) %>% as.matrix()
@@ -194,6 +281,7 @@ score_regularized <- function(
     phenotype_vec <- phenotype_vec %>% as.factor()
   }
   
+  # Degrees of freedom exceeds features, no regularization
   if (dof >= ncol(full_data)){
     gn <- glmnet(x = full_data, 
                y = phenotype_vec,
@@ -203,6 +291,8 @@ score_regularized <- function(
                standardize = F,
                lambda = 0)
   }
+  
+  # Regularization
   else{
     L <- get_lambda(centered_dat, (dof - dim(confounders)[2]))
     gn <- glmnet(x = full_data, 
@@ -214,6 +304,8 @@ score_regularized <- function(
                  lambda = L/nrow(data),
                  penalty.factor = c(rep(1, dim(data)[2]), rep(0, dim(confounders)[2])))
   }
+  
+  # Base model with only confounders
   gn_conf <- glmnet(x = confounders,
                     y = phenotype_vec,
                     family =family,
@@ -221,6 +313,7 @@ score_regularized <- function(
                     lambda = 0,
                     standardize = F)
   
+  # BIC calculation
   if(return_BIC){
     tLL <- gn$nulldev - deviance(gn)
     k <- (dof - dim(confounders)[2])
@@ -229,7 +322,7 @@ score_regularized <- function(
     return(BIC)
   }
   
-  # p-val of model differences
+  # p-val of difference between model with and without data
   d_dev = deviance(gn_conf) - deviance(gn)
   print(-expm1( pchisq( d_dev,df = (dof - dim(confounders)[2]), log.p = T)))
   -expm1( pchisq( d_dev,df = (dof - dim(confounders)[2]), log.p = T))
@@ -238,6 +331,22 @@ score_regularized <- function(
   
 #### P-value Adjustment Module ####
 
+## P value adjustment wrapper ##
+#' p_adjust_wrapper
+#' 
+#' Adjust p-values from linear models
+#' 
+#'
+#' @param allpvals Pvals of all modules
+#' @param inds Indices of allpvals that are not NA
+#' @param R R struct
+#' @param phenotype_vec Vector of sample phenotypes
+#' @param confounders Vector of confounder column names
+#' @param score_method Scoring method (either "lm" or "pc")
+#' @param adjust_method Either "wy" for westfall-young or other adjust method accepted by p.adjust
+#' 
+#' @return Adjusted p-values for all modules
+#' 
 p_adjust_wrapper <- function(
   allpvals,
   inds,
@@ -247,6 +356,8 @@ p_adjust_wrapper <- function(
   score_method,
   adjust_method
 ){
+  
+  # West-fall young adjustment
   if (adjust_method == "wy"){
     return(adjust_wy(
       allpvals,
@@ -257,18 +368,36 @@ p_adjust_wrapper <- function(
       score_method
     ))
   }
+  
+  # p.adjust 
   else {
     return(p.adjust(allpvals, method = adjust_method, n = length(inds)))
   }
 }
 
+## Westfall-Young pvalue adjustment ##
+#' adjust_wy
+#' 
+#' Adjust p-values from linear models using Westfall-Young Randomization
+#' 
+#'
+#' @param allpvals Pvals of all modules
+#' @param inds Indices of allpvals that are not NA
+#' @param R R struct
+#' @param phenotype_vec Vector of sample phenotypes
+#' @param confounders Vector of confounder column names
+#' @param score_method Scoring method (either "lm" or "pc")
+#' @param nrand Number of random iterations to create null p distribution
+#' 
+#' @return Adjusted p-values for all modules
+#' 
 adjust_wy <- function(
   allpvals,
   inds,
   R,
   phenotype_vec,
   confounders, 
-  method,
+  score_method,
   nrand = 1000
 ){
   #### WY p-values ----
@@ -280,7 +409,7 @@ adjust_wy <- function(
                R, 
                sample(phenotype_vec), 
                confounders, 
-               method)) 
+               score_method)) 
     } %>% unlist()
   
   # NAs can occur (very rarely), cut them out
