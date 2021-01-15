@@ -1,7 +1,7 @@
 ## Backend Modules ###
 ## Hierarchical Clustering Module ####
 
-
+library(glmnet)
 ## Distance Metric ##
 #' abs_cor_dist
 #' 
@@ -290,6 +290,7 @@ score_regularized <- function(
                alpha = 0,
                standardize = F,
                lambda = 0)
+    dof <- ncol(full_data)
   }
   
   # Regularization

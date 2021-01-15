@@ -52,7 +52,7 @@ input <- function(
 #' sample and molecular annotations, hierarchical structure, cluster membership
 #' node order within the hierarchical structure and a color vector for the platforms
 
-initialize <- function(
+initialize_R <- function(
   data.matrix, # Matrix of raw data (samples * nodes)
   sample.data, # Matrix of sample annotations
   mol.data, # Matrix of node annotations

@@ -67,6 +67,25 @@ plot_dend <- function(
   dend_network
 }
 
+
+plot_dend_fast<-function(
+  R,
+  order_coords,
+  dend_data
+){
+  colors <- R$colors
+    plot_ly(x = ~order_coords$x,
+            y = ~order_coords$y) %>% 
+    add_segments(
+      x=dend_data$segments$x, 
+      xend=dend_data$segments$xend, 
+      y=dend_data$segments$y, 
+      yend=dend_data$segments$yend)%>%
+    add_trace(type='scatter',
+              mode = "markers",
+              text = mapply(function(i) get_node_label(R, i), 1:nnodes(R$HCL)),
+              marker = list(color = colors, size = 9))
+}
 #### Make network view ####
 
 #### Get platform colors ####
@@ -122,7 +141,7 @@ cluster_net <- function(
   vs <- V(G)
   vs$platform <- platforms
   es <- as.data.frame(get.edgelist(G))
-  L <- layout.circle(G)
+  L <- layout_with_gem(G)
   
   network <- plot_ly(x = ~L[,1], y = ~L[,2]) %>% 
     
