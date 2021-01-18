@@ -24,7 +24,7 @@ get_node_label <- function(
 ){
   internal_nodes <- dim(R$HCL$merge)[1]
   if (i > (internal_nodes)) return(R$HCL$labels[(i - internal_nodes)])
-  else return(paste("BIC: ", round( R$BIC[[i]], digits = 3), ", p-value: ", R$pvals[i]))
+  else return(paste("BIC: ", round( R$clust_info$BIC[[i]], digits = 3), ", p-value: ", R$clust_info$pvals[i]))
 }
 
 
@@ -34,57 +34,25 @@ get_node_label <- function(
 #'
 #' @param R R struct
 #' @param order_coords coordinates of points in plot
-#' @param i index of selected node, default NA
 #' 
 #' @return dend_network which is a plotly network view of the dendrogram
 #' 
 
 
-plot_dend <- function(
-  R,
-  order_coords,
-  i
+plot_dend<-function(
+  R
 ){
-  
-  dend_G <- graph_from_adjacency_matrix(dend_to_adj_mat(R$HCL)) 
-  es <- as.data.frame(get.edgelist(dend_G))
-  colors <- R$colors
-  colors[i] <- "yellow"
-  dend_network <- 
-    plot_ly(x = ~order_coords$x,
-            y = ~order_coords$y) %>% 
-    add_segments(data = data.frame(
-      x = c(order_coords$x[es$V1], order_coords$x[es$V2]),
-      xend = c(order_coords$x[es$V2],order_coords$x[es$V2]), 
-      y = c(order_coords$y[es$V1], order_coords$y[es$V1]), 
-      yend = c(order_coords$y[es$V1], order_coords$y[es$V2])),
-      x = ~x,xend = ~xend,y = ~y,yend = ~yend,
-      mode='lines',color = I('black'),size = I(1), alpha = 0.5)%>%
-    add_trace(type='scatter',
-              mode = "markers",
-              text = mapply(function(i) get_node_label(R, i), 1:nnodes(R$HCL)),
-              marker = list(color = colors, size = 9))
-  dend_network
-}
-
-
-plot_dend_fast<-function(
-  R,
-  order_coords,
-  dend_data
-){
-  colors <- R$colors
-    plot_ly(x = ~order_coords$x,
-            y = ~order_coords$y) %>% 
-    add_segments(
-      x=dend_data$segments$x, 
-      xend=dend_data$segments$xend, 
-      y=dend_data$segments$y, 
-      yend=dend_data$segments$yend)%>%
-    add_trace(type='scatter',
-              mode = "markers",
-              text = mapply(function(i) get_node_label(R, i), 1:nnodes(R$HCL)),
-              marker = list(color = colors, size = 9))
+  R$clust_info %>% plot_ly(x = ~Coord_X,
+          y = ~Coord_Y) %>% 
+  add_segments(
+    x=R$dend_data$segments$x, 
+    xend=R$dend_data$segments$xend, 
+    y=R$dend_data$segments$y, 
+    yend=R$dend_data$segments$yend)%>%
+  add_trace(type='scatter',
+            mode = "markers",
+            text = mapply(function(i) get_node_label(R, i), 1:nnodes(R$HCL)),
+            marker = list(color = ~R$colors, size = 9))
 }
 #### Make network view ####
 
@@ -123,7 +91,7 @@ cluster_net <- function(
   R,
   i
 ) {
-  
+  tic()
   members <- R$clusts[[i]]
   names <- R$annos$name[members]
   platforms <- R$annos$platform[members]
@@ -135,32 +103,42 @@ cluster_net <- function(
   cutoff <- abs(max(E(min_span)$weight))
   adj_mat <- 1*(abs(cor_vals) >= cutoff)
   adj_mat[lower.tri(adj_mat)] <- 0
-  rownames(adj_mat) <- members
-  colnames(adj_mat)<- members
-  G<- graph_from_adjacency_matrix(adj_mat)
-  vs <- V(G)
-  vs$platform <- platforms
-  es <- as.data.frame(get.edgelist(G))
-  L <- layout_with_gem(G)
-  
-  network <- plot_ly(x = ~L[,1], y = ~L[,2]) %>% 
-    
-    add_segments(data = data.frame(x = L[,1][es$V1], 
-                                   xend = L[,1][es$V2], 
-                                   y = L[,2][es$V1], 
-                                   yend = L[,2][es$V2]),
-                 x = ~x, xend = ~xend, y = ~y, yend = ~yend,
-                 mode='lines',
-                 color = I('black'),
-                 size = I(1), 
-                 alpha = 0.5) %>%
-    
-    add_trace(type = "scatter",
-              mode = "markers", 
-              text = names, 
-              hoverinfo = "text",
-              marker = list(color = get_plat_colors(R, platforms), 
-                            size = 40))
+  diag(adj_mat)<-0
+  from_to<-which(adj_mat==1,arr.ind=T)
+  nodes<-data.frame(id=1:length(members), label=names)
+  edges<-data.frame(from=from_to[,1], to=from_to[,2])
+  toc()
+  # tic()
+  # rownames(adj_mat) <- members
+  # colnames(adj_mat)<- members
+  # G<- graph_from_adjacency_matrix(adj_mat)
+  # vs <- V(G)
+  # vs$platform <- platforms
+  # es <- as.data.frame(get.edgelist(G))
+  # toc()
+  tic()
+  network<-visNetwork(nodes,edges)
+  # L <- layout_with_gem(G)
+  # 
+  # network <- plot_ly(x = ~L[,1], y = ~L[,2]) %>% 
+  #   
+  #   add_segments(data = data.frame(x = L[,1][es$V1], 
+  #                                  xend = L[,1][es$V2], 
+  #                                  y = L[,2][es$V1], 
+  #                                  yend = L[,2][es$V2]),
+  #                x = ~x, xend = ~xend, y = ~y, yend = ~yend,
+  #                mode='lines',
+  #                color = I('black'),
+  #                size = I(1), 
+  #                alpha = 0.5) %>%
+  #   
+  #   add_trace(type = "scatter",
+  #             mode = "markers", 
+  #             text = names, 
+  #             hoverinfo = "text",
+  #             marker = list(color = get_plat_colors(R, platforms), 
+  #                           size = 40))
+  toc()
   network
 }
 

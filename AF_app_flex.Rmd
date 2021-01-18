@@ -17,25 +17,19 @@ library(igraph)
 library(DT)
 
 source(codes.makepath("autofocus/Frontend_Modules.R"))
-load("~/Documents/Documents - MAC203001/JanLab/QD_R.rda")
+#load("~/Box/results/Annalise/QD_R.rda")
+load("/Users/aschweickart/QD_test.rda")
 R <- QD_results_lm
-dend_data <- ggdendro::dendro_data(as.dendrogram(R$HCL), type = "rectangle")
-dend_xy <- R$HCL %>% as.dendrogram %>%get_nodes_xy()
-order_coords <- data.frame(index = R$order, 
-                             x = round(dend_xy[,1], digits = 10), 
-                             y = round(dend_xy[,2], digits = 10)) 
   
-order_coords <- order_coords[order(order_coords$index),]
-  
-dend<-plot_dend_fast(R, order_coords, dend_data) 
+dend<-plot_dend(R) 
 
 selected_node = reactiveValues(n = NA,last=NA)
 observeEvent(event_data("plotly_click"),{
   d<-event_data("plotly_click")
   if (!is.null(d$y)){
-    if (d$y > 0 & length(order_coords$index[which(order_coords$y ==d$y)])==1){
+    if (d$y > 0){
       selected_node$last = selected_node$n
-      selected_node$n = order_coords$index[which(order_coords$y ==d$y)]
+      selected_node$n = which(R$clust_info$Coord_Y ==round(d$y,digits=6))
       
   }}})
 
@@ -73,21 +67,22 @@ renderPlotly({
  
     ### Dendrogram ###
     view_range <- match(R$clusts[as.double(selected_node$n)][[1]], R$HCL$order)
-    x <- c((min(view_range)-1),(max(view_range)+1))
-    y <- c(-0.1, (order_coords[selected_node$n,3])+0.1)
+    x_range <- c((min(view_range)-1),(max(view_range)+1))
+    y <- R$clust_info[selected_node$n,]$Coord_Y
+    y_range <- c(-(y*0.1), y+(y*0.1))
 
-    x_axis$range <- x
-    y_axis$range <- y
+    x_axis$range <- x_range
+    y_axis$range <- y_range
     if (!is.na(selected_node$last)){
       dend<-
         add_markers(dend,
-                          x=order_coords[selected_node$last,2],
-                          y=order_coords[selected_node$last,3],
+                          x=R$clust_info[selected_node$n,]$Coord_X,
+                          y=R$clust_info[selected_node$n,]$Coord_Y,
                           marker = list(color = R$colors[selected_node$last], size = 9))
       }
     dend<-add_markers(dend,
-                  x=order_coords[selected_node$n,2],
-                  y=order_coords[selected_node$n,3],
+                  x=R$clust_info[selected_node$n,]$Coord_X,
+                  y=R$clust_info[selected_node$n,]$Coord_Y,
                   marker = list(color = "yellow", size = 9)) %>% 
 
     layout(
@@ -105,7 +100,7 @@ Row
 
 ```{r}
 DT::renderDataTable(
-    datatable(data.frame(R$annos[R$clusts[[selected_node$n]],])), fillContainer = TRUE)
+    datatable(R$clust_info, fillContainer = TRUE))
 ```
 
 Row 
@@ -113,33 +108,33 @@ Row
 
 ### Network View
 ```{r}
-renderPlotly({
-      
-    axis <- list(
-      title = "",
-      showline = TRUE,
-      showticklabels = F,
-      mirror="ticks",
-      showgrid = F,
-      zeroline = F,
-      linecolor = toRGB("black"),
-      linewidth = 2
-    )
-    
-    if (is.na(selected_node$n)){
-      net = plotly_empty() %>% add_annotations(text = "Select a Cluster to View", showarrow = F) %>% layout(xaxis = axis, yaxis = axis)
-    }
-    else{
-        net<-plotly::layout(
-        cluster_net(R, as.double(selected_node$n)),
-        xaxis = axis,
-        yaxis = axis,
-        showlegend=F
-      )
-    }
-
-  net
-})
+# renderPlotly({
+# 
+#     axis <- list(
+#       title = "",
+#       showline = TRUE,
+#       showticklabels = F,
+#       mirror="ticks",
+#       showgrid = F,
+#       zeroline = F,
+#       linecolor = toRGB("black"),
+#       linewidth = 2
+#     )
+# 
+#     if (is.na(selected_node$n)){
+#       net = plotly_empty() %>% add_annotations(text = "Select a Cluster to View", showarrow = F) %>% layout(xaxis = axis, yaxis = axis)
+#     }
+#     else{
+#         net<-plotly::layout(
+#         cluster_net(R, as.double(selected_node$n)),
+#         xaxis = axis,
+#         yaxis = axis,
+#         showlegend=F
+#       )
+#     }
+# 
+#   net
+# })
 ```
 
 ### Node Annotations

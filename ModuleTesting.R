@@ -39,14 +39,14 @@ find_sig_clusts <- function(
 
     print("Calculating BIC")
     
-    R$BIC <- foreach(i = 1:nnodes(R$HCL)) %dopar% {scoring_func_wrapper(i, 
+    R$clust_info$BIC <- foreach(i = 1:nnodes(R$HCL)) %dopar% {scoring_func_wrapper(i, 
                                                                         R, 
                                                                         as.matrix(R$samples[[phenotype]]), 
                                                                         confounders, 
                                                                         score_method,
                                                                         return_BIC = T) }
     
-    R$pvals <- p_adjust_wrapper(unlist(allpvals),
+    R$clust_info$pvals <- p_adjust_wrapper(unlist(allpvals),
                                 inds,
                                 R,
                                 as.matrix(R$samples[[phenotype]]),
@@ -55,8 +55,8 @@ find_sig_clusts <- function(
                                 adjust_method)
   
     # determine significant nodes to be colored
-    signif <- which(R$pvals<0.05)
-    
+    signif <- which(R$clust_info$pvals<0.05)
+    print(signif)
     R$colors <- mapply(function(i) get_node_color(R, i, signif, node_color, node_color_light), 1:nnodes(R$HCL))
   
     to_remove <- c("data", "dist")
@@ -93,19 +93,19 @@ get_node_color <- function(
       child2 <- if (children[2]<0) (internal_nodes + abs(children[2])) else children[2]
       
       ## Children aren't significant, combination is
-      if (R$pvals[child1] > 0.05 & R$pvals[child2] > 0.05) return(node_color)
+      if (R$clust_info$pvals[child1] > 0.05 & R$clust_info$pvals[child2] > 0.05) return(node_color)
       
       ## Children are significant
-      if(R$pvals[child1] < 0.05 & R$pvals[child2] < 0.05){
+      if(R$clust_info$pvals[child1] < 0.05 & R$clust_info$pvals[child2] < 0.05){
         
-        if (R$BIC[[i]] < R$BIC[[child1]] & R$BIC[[i]]<R$BIC[[child2]]) return(node_color) else return(node_color_light)
+        if (R$clust_info$BIC[[i]] < R$clust_info$BIC[[child1]] & R$clust_info$BIC[[i]]<R$clust_info$BIC[[child2]]) return(node_color) else return(node_color_light)
       }
       
       ## One child is significant
       else {
-        sig_child <- if (R$pvals[child1] < R$pvals[child2]) child1 else child2
+        sig_child <- if (R$clust_info$pvals[child1] < R$clust_info$pvals[child2]) child1 else child2
         
-        if(R$BIC[[i]] < R$BIC[[sig_child]]) return(node_color) else return(node_color_light)
+        if(R$clust_info$BIC[[i]] < R$clust_info$BIC[[sig_child]]) return(node_color) else return(node_color_light)
       }
     }
   }

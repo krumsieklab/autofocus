@@ -63,14 +63,35 @@ initialize_R <- function(
   R$C <- cor(data.matrix)
   
   R$HCL <- R %>% get_dendro(method = "average", cores)
+  R$dend_data <- ggdendro::dendro_data(as.dendrogram(R$HCL), type = "rectangle")
   R$order <- get_dend_indices(R, dim(R$HCL$merge)[1], c())
   
-  R$platforms = unique(R$annos$platform)
+  R$platforms <- unique(R$annos$platform)
   R$clusts <- lapply(1:dim(R$HCL$merge)[1], function(x) get_members(R, x))
+  dend_xy <- R$HCL %>% as.dendrogram %>%get_nodes_xy()
+  parents <- unlist(lapply(1:nnodes(R$HCL), function(i) get_parent(R,i)))
+  coord_x <- unlist(lapply(1:nnodes(R$HCL), function(i) round(dend_xy[which(R$order==i),1], digits = 6)))
+  coord_y <- unlist(lapply(1:nnodes(R$HCL), function(i) round(dend_xy[which(R$order==i),2],digits= 6)))
+  
+  R$clust_info <- data.frame(ClusterID=1:nnodes(R$HCL), 
+                             Parent = parents, 
+                             Coord_X=coord_x, 
+                             Coord_Y=coord_y)
   
   R
 }
 
+
+get_parent <- function(
+  R,
+  i
+){
+  if (i > dim(R$HCL$merge)[1]){
+    ind <- dim(R$HCL$merge)[1] - i
+    return(max(which(R$HCL$merge[,2]  == ind), which(R$HCL$merge[,1]  == ind)))
+  }
+  max(which(R$HCL$merge[,2]  == i), which(R$HCL$merge[,1]  == i))
+}
 
 #### Get Cluster members ####
 #' get_members

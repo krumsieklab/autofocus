@@ -399,7 +399,7 @@ adjust_wy <- function(
   phenotype_vec,
   confounders, 
   score_method,
-  nrand = 1000
+  nrand = 10
 ){
   #### WY p-values ----
   ## -> randomize outcome, run all tests, record smallest p-value of each iteration
