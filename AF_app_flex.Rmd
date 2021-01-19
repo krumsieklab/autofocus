@@ -17,8 +17,7 @@ library(igraph)
 library(DT)
 
 source(codes.makepath("autofocus/Frontend_Modules.R"))
-#load("~/Box/results/Annalise/QD_R.rda")
-load("/Users/aschweickart/QD_test.rda")
+load("~/Box/results/Annalise/QD_R.rda")
 R <- QD_results_lm
   
 dend<-plot_dend(R) 
@@ -29,7 +28,7 @@ observeEvent(event_data("plotly_click"),{
   if (!is.null(d$y)){
     if (d$y > 0){
       selected_node$last = selected_node$n
-      selected_node$n = which(R$clust_info$Coord_Y ==round(d$y,digits=6))
+      selected_node$n = which(R$clust_info$Coord_Y ==round(d$y,digits=10))
       
   }}})
 
@@ -105,37 +104,6 @@ DT::renderDataTable(
 
 Row 
 -----------------------------------------------------------------------
-
-### Network View
-```{r}
-# renderPlotly({
-# 
-#     axis <- list(
-#       title = "",
-#       showline = TRUE,
-#       showticklabels = F,
-#       mirror="ticks",
-#       showgrid = F,
-#       zeroline = F,
-#       linecolor = toRGB("black"),
-#       linewidth = 2
-#     )
-# 
-#     if (is.na(selected_node$n)){
-#       net = plotly_empty() %>% add_annotations(text = "Select a Cluster to View", showarrow = F) %>% layout(xaxis = axis, yaxis = axis)
-#     }
-#     else{
-#         net<-plotly::layout(
-#         cluster_net(R, as.double(selected_node$n)),
-#         xaxis = axis,
-#         yaxis = axis,
-#         showlegend=F
-#       )
-#     }
-# 
-#   net
-# })
-```
 
 ### Node Annotations
 

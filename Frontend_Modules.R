@@ -52,7 +52,7 @@ plot_dend<-function(
   add_trace(type='scatter',
             mode = "markers",
             text = mapply(function(i) get_node_label(R, i), 1:nnodes(R$HCL)),
-            marker = list(color = ~R$colors, size = 9))
+            marker = list(color = ~colors, size = 9))
 }
 #### Make network view ####
 

@@ -70,8 +70,8 @@ initialize_R <- function(
   R$clusts <- lapply(1:dim(R$HCL$merge)[1], function(x) get_members(R, x))
   dend_xy <- R$HCL %>% as.dendrogram %>%get_nodes_xy()
   parents <- unlist(lapply(1:nnodes(R$HCL), function(i) get_parent(R,i)))
-  coord_x <- unlist(lapply(1:nnodes(R$HCL), function(i) round(dend_xy[which(R$order==i),1], digits = 6)))
-  coord_y <- unlist(lapply(1:nnodes(R$HCL), function(i) round(dend_xy[which(R$order==i),2],digits= 6)))
+  coord_x <- unlist(lapply(1:nnodes(R$HCL), function(i) round(dend_xy[which(R$order==i),1], digits = 10)))
+  coord_y <- unlist(lapply(1:nnodes(R$HCL), function(i) round(dend_xy[which(R$order==i),2],digits= 10)))
   
   R$clust_info <- data.frame(ClusterID=1:nnodes(R$HCL), 
                              Parent = parents, 
