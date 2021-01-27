@@ -44,7 +44,7 @@ find_sig_clusts <- function(
                                                                         as.matrix(R$samples[[phenotype]]), 
                                                                         confounders, 
                                                                         score_method,
-                                                                        return_BIC = T) }
+                                                                        return_BIC = T) } %>% round(digits=5)
     
     R$clust_info$pvals <- p_adjust_wrapper(unlist(allpvals),
                                 inds,
@@ -52,7 +52,7 @@ find_sig_clusts <- function(
                                 as.matrix(R$samples[[phenotype]]),
                                 confounders,
                                 score_method = score_method,
-                                adjust_method)
+                                adjust_method) %>% round(digits=5)
   
     # determine significant nodes to be colored
     signif <- which(R$clust_info$pvals<0.05)

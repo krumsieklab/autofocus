@@ -76,7 +76,8 @@ initialize_R <- function(
   R$clust_info <- data.frame(ClusterID=1:nnodes(R$HCL), 
                              Parent = parents, 
                              Coord_X=coord_x, 
-                             Coord_Y=coord_y)
+                             Coord_Y=coord_y,
+                             Size = c(mapply(function(i)length(i),R$clusts),rep(1, nleaves(R$HCL))))
   
   R
 }

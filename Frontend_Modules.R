@@ -24,7 +24,7 @@ get_node_label <- function(
 ){
   internal_nodes <- dim(R$HCL$merge)[1]
   if (i > (internal_nodes)) return(R$HCL$labels[(i - internal_nodes)])
-  else return(paste("BIC: ", round( R$clust_info$BIC[[i]], digits = 3), ", p-value: ", R$clust_info$pvals[i]))
+  else return(paste("Cluster ID:",R$clust_info$ClusterID[[i]] ,"BIC: ", round( R$clust_info$BIC[[i]], digits = 3), ", p-value: ", R$clust_info$pvals[i]))
 }
 
 
@@ -142,37 +142,6 @@ cluster_net <- function(
   network
 }
 
-#### Convert dendrogram to adjacency matrix ####
-#' dend_to_adj_mat
-#' 
-#' Convert dendrogram to adjacency matrix for visualization
-#'
-#' @param hclust_obj the hclust object to convert
-#' 
-#' @return an adjacency matrix of the dendrogram where each parent has an edge with its children
-#' 
-
-dend_to_adj_mat <- function(
-  hclust_obj
-){
-  
-  adj_mat <- matrix(0L, nrow = (2*dim(hclust_obj$merge)[1])+1, ncol = (2*dim(hclust_obj$merge)[1])+1)
-  for(i in rev(1:dim(hclust_obj$merge)[1])){
-    parent <- i
-    right_index <- hclust_obj$merge[i,1]
-    if (right_index < 0){
-      right_index <- abs(right_index) + dim(hclust_obj$merge)[1]
-    }
-    left_index <- hclust_obj$merge[i,2]
-    if (left_index < 0){
-      left_index <- abs(left_index) + dim(hclust_obj$merge)[1]
-    }
-    adj_mat[i, right_index] <- 1
-    adj_mat[i, left_index] <- 1
-  }
-  adj_mat
-}
-
 
 #### Make list view ####
 
@@ -192,18 +161,22 @@ get_anno_data <- function(
   R,
   i
 ){
-  mat <- subset( R$annos[R$clusts[[i]],], select = c(platform, SUPER_PATHWAY, SUB_PATHWAY))
-  labels <- c()
-  parents <- c()
-  values <- c()
-  for (i in 1:length(colnames(mat))){
-    categories <- unique(mat[,i][!is.na(mat[,i])])
-    if (length(categories) != 0){
-      labels <- c(labels, colnames(mat)[i], categories)
-      parents <- c(parents, "", rep(colnames(mat)[i], times = length(categories)))
-      values <- c(values, 0, table(mat[,i])[categories])
-    }
+  mat <- R$annos[R$clusts[[i]],]
+  plots <- c()
+  for (n in 1:length(colnames(mat))){
+    freqs<- data.frame(table(mat[,n]))
+    names(freqs) <- c(colnames(mat)[n], "count")
+    plots<- c(plots, ggplot(freqs, aes(x=freqs[,1],y=count,fill =freqs[,1]))+
+      geom_bar(stat="identity")+
+      coord_flip() +
+      xlab(colnames(mat)[n])+
+      theme(panel.background = element_blank(), panel.grid.major=element_blank(), legend.position="none")+
+      geom_text(aes(x = freqs[,1], y = count, label = count))+
+      scale_x_discrete(labels=add_line_format(freqs[,1])))
   }
-  sun_df <- data.frame(labels, parents, values)
-  sun_df
+  plots
+}
+
+add_line_format <- function(names){
+  unlist(lapply(names, function(i) paste(strwrap(i, 25), collapse="\n")))
 }
