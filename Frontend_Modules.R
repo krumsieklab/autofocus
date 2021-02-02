@@ -1,8 +1,11 @@
 ### Frontend Modules ###
-
-
 suppressPackageStartupMessages(library(RColorBrewer))
-
+suppressPackageStartupMessages(library(plotly))
+suppressPackageStartupMessages(library(shiny))
+suppressPackageStartupMessages(library(igraph))
+suppressPackageStartupMessages(library(dendextend))
+suppressPackageStartupMessages(library(shinydashboard))
+suppressPackageStartupMessages(library(DT))
 
 #### Make Dendrogram ####
 
@@ -11,10 +14,10 @@ suppressPackageStartupMessages(library(RColorBrewer))
 #' 
 #' Gets the label of a node
 #' the label is the molecule name if the node is a leaf
-#' the label is the BIC and p-value if the node is internal
+#' the label is cluster number, BIC and p-value if the node is internal
 #'
 #' @param R R struct
-#' @param i index of module we are labeling
+#' @param i index of module to be labeled
 #' 
 #' @return label of node i 
 #' 
@@ -54,7 +57,8 @@ plot_dend<-function(
             text = mapply(function(i) get_node_label(R, i), 1:nnodes(R$HCL)),
             marker = list(color = ~colors, size = 9))
 }
-#### Make network view ####
+
+
 
 #### Get platform colors ####
 #' get_plat_colors
@@ -77,73 +81,6 @@ get_plat_colors <- function(
   mapply(function(x) col_vector[which(R$platform == x)], plat_list)
 }
 
-#' cluster_net
-#' 
-#' Create network view of module using minimum-spanning tree method
-#'
-#' @param R R struct
-#' @param i index of parent of module to make network view
-#' 
-#' @return network which is a plotly network of the module
-#' 
-
-cluster_net <- function(
-  R,
-  i
-) {
-  tic()
-  members <- R$clusts[[i]]
-  names <- R$annos$name[members]
-  platforms <- R$annos$platform[members]
-  cor_vals <- R$C[members,members]
-  full_conn <- graph_from_adjacency_matrix((-1*abs(cor_vals)), 
-                                           mode='undirected', 
-                                           weighted = T)
-  min_span <- mst(full_conn, weights = E(full_conn)$weight)
-  cutoff <- abs(max(E(min_span)$weight))
-  adj_mat <- 1*(abs(cor_vals) >= cutoff)
-  adj_mat[lower.tri(adj_mat)] <- 0
-  diag(adj_mat)<-0
-  from_to<-which(adj_mat==1,arr.ind=T)
-  nodes<-data.frame(id=1:length(members), label=names)
-  edges<-data.frame(from=from_to[,1], to=from_to[,2])
-  toc()
-  # tic()
-  # rownames(adj_mat) <- members
-  # colnames(adj_mat)<- members
-  # G<- graph_from_adjacency_matrix(adj_mat)
-  # vs <- V(G)
-  # vs$platform <- platforms
-  # es <- as.data.frame(get.edgelist(G))
-  # toc()
-  tic()
-  network<-visNetwork(nodes,edges)
-  # L <- layout_with_gem(G)
-  # 
-  # network <- plot_ly(x = ~L[,1], y = ~L[,2]) %>% 
-  #   
-  #   add_segments(data = data.frame(x = L[,1][es$V1], 
-  #                                  xend = L[,1][es$V2], 
-  #                                  y = L[,2][es$V1], 
-  #                                  yend = L[,2][es$V2]),
-  #                x = ~x, xend = ~xend, y = ~y, yend = ~yend,
-  #                mode='lines',
-  #                color = I('black'),
-  #                size = I(1), 
-  #                alpha = 0.5) %>%
-  #   
-  #   add_trace(type = "scatter",
-  #             mode = "markers", 
-  #             text = names, 
-  #             hoverinfo = "text",
-  #             marker = list(color = get_plat_colors(R, platforms), 
-  #                           size = 40))
-  toc()
-  network
-}
-
-
-#### Make list view ####
 
 ### Make annotation view ###
 
@@ -162,21 +99,104 @@ get_anno_data <- function(
   i
 ){
   mat <- R$annos[R$clusts[[i]],]
-  plots <- c()
-  for (n in 1:length(colnames(mat))){
-    freqs<- data.frame(table(mat[,n]))
-    names(freqs) <- c(colnames(mat)[n], "count")
-    plots<- c(plots, ggplot(freqs, aes(x=freqs[,1],y=count,fill =freqs[,1]))+
-      geom_bar(stat="identity")+
-      coord_flip() +
-      xlab(colnames(mat)[n])+
-      theme(panel.background = element_blank(), panel.grid.major=element_blank(), legend.position="none")+
-      geom_text(aes(x = freqs[,1], y = count, label = count))+
-      scale_x_discrete(labels=add_line_format(freqs[,1])))
-  }
-  plots
+  lapply(1:length(colnames(mat)),function(n){
+    if (!all(is.na(mat[,n]))){
+      freqs<- data.frame(table(mat[,n]))
+      if (nrow(freqs)>10)
+      {
+        freqs<-freqs[order(-freqs$Freq)[1:10],]
+      }
+      names(freqs) <- c(colnames(mat)[n], "count")
+      ggplot(freqs, aes(x=freqs[,1],y=count,fill =freqs[,1]))+
+        geom_bar(stat="identity")+
+        coord_flip() +
+        xlab(colnames(mat)[n])+
+        theme(panel.background = element_blank(), panel.grid.major=element_blank(), legend.position="none")+
+        geom_text(aes(x = freqs[,1], y = count, label = count))+
+        scale_x_discrete(labels=add_line_format(freqs[,1]))
+    }
+  })
+  
 }
 
+#### Format annotation names ####
+#' add_line_format
+#' 
+#' Formats annotation labels adding a line break if they are too long
+#'
+#' @param names Vector of annotation names
+#' 
+#' @return Vector of annotation names with line split
+#' 
 add_line_format <- function(names){
   unlist(lapply(names, function(i) paste(strwrap(i, 25), collapse="\n")))
 }
+
+
+### OLD CODE ###
+#### Make network view ####
+
+#' cluster_net
+#' 
+#' Create network view of module using minimum-spanning tree method
+#'
+#' @param R R struct
+#' @param i index of parent of module to make network view
+#' 
+#' @return network which is a plotly network of the module
+#' 
+
+
+# cluster_net <- function(
+#   R,
+#   i
+# ) {
+#   members <- R$clusts[[i]]
+#   names <- R$annos$name[members]
+#   platforms <- R$annos$platform[members]
+#   cor_vals <- R$C[members,members]
+#   full_conn <- graph_from_adjacency_matrix((-1*abs(cor_vals)), 
+#                                            mode='undirected', 
+#                                            weighted = T)
+#   min_span <- mst(full_conn, weights = E(full_conn)$weight)
+#   cutoff <- abs(max(E(min_span)$weight))
+#   adj_mat <- 1*(abs(cor_vals) >= cutoff)
+#   adj_mat[lower.tri(adj_mat)] <- 0
+#   diag(adj_mat)<-0
+#   from_to<-which(adj_mat==1,arr.ind=T)
+#   nodes<-data.frame(id=1:length(members), label=names)
+#   edges<-data.frame(from=from_to[,1], to=from_to[,2])
+# 
+#   rownames(adj_mat) <- members
+#   colnames(adj_mat)<- members
+#   G<- graph_from_adjacency_matrix(adj_mat)
+#   vs <- V(G)
+#   vs$platform <- platforms
+#   es <- as.data.frame(get.edgelist(G))
+# 
+#   network<-visNetwork(nodes,edges)
+#   L <- layout_with_gem(G)
+# 
+#   network <- plot_ly(x = ~L[,1], y = ~L[,2]) %>%
+# 
+#     add_segments(data = data.frame(x = L[,1][es$V1],
+#                                    xend = L[,1][es$V2],
+#                                    y = L[,2][es$V1],
+#                                    yend = L[,2][es$V2]),
+#                  x = ~x, xend = ~xend, y = ~y, yend = ~yend,
+#                  mode='lines',
+#                  color = I('black'),
+#                  size = I(1),
+#                  alpha = 0.5) %>%
+# 
+#     add_trace(type = "scatter",
+#               mode = "markers",
+#               text = names,
+#               hoverinfo = "text",
+#               marker = list(color = get_plat_colors(R, platforms),
+#                             size = 40))
+# 
+#   network
+# }
+
+

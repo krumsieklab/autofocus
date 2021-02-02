@@ -1,27 +1,17 @@
-suppressPackageStartupMessages(library(plotly))
-suppressPackageStartupMessages(library(shiny))
-suppressPackageStartupMessages(library(igraph))
-suppressPackageStartupMessages(library(dendextend))
 source(codes.makepath("autofocus/Frontend_Modules.R"))
 
 
-# ui <- fluidPage(theme = shinytheme("journal"),
-#   titlePael("AutoFocus Run Results"),
-#       fluidRow(
-#         column(12,plotlyOutput("dendro", height="50%")),
-#                #plotlyOutput("barcharts")),
-#         column(12,dataTableOutput("all_modules_table",height="50%"),
-#                dataTableOutput("single_module_table",height="50%"))
-# ))
-load("~/Box/results/Annalise/QD_R.rda")
-R<-QD_results_lm
 
+base::load(file=data.makepath("results/Annalise/QD_R.rda"))
+R<-QD_results_lm
+R$annos<-R$annos[,c("platform","SUB_PATHWAY","SUPER_PATHWAY")]
 body <- dashboardBody(
   fluidRow(tabBox(title=NULL,width=12,
                   tabPanel("Tree View",plotlyOutput("dendro")),
                   tabPanel("List View",dataTableOutput("all_modules_table")))),
     fluidRow(
-            dataTableOutput("single_module_table",height="50%")
+            dataTableOutput("single_module_table"),
+            plotlyOutput("barplots")
   )
 )
 
@@ -115,34 +105,34 @@ server <- function(input, output) {
     
   
   ### Annotation section ###
-  # output$barplots <- renderPlotly({
-  #   axis <- list(
-  #     
-  #     showline = TRUE,
-  #     showticklabels = F,
-  #     mirror="ticks",
-  #     showgrid = F,
-  #     zeroline = F,
-  #     linecolor = toRGB("black"),
-  #     linewidth = 2
-  #   )
-  #   if (is.na(selected_node$n)){
-  #     sunburst = plotly_empty() %>% 
-  #       add_annotations(text = "Select a Cluster for Annotation Details", showarrow = F) %>% 
-  #       layout(xaxis = axis, yaxis = axis)
-  # 
-  #   }
-  # 
-  #   else{
-  #     barplot_df <- get_anno_data(R, selected_node$n)
-  #     sunburst <- plot_ly(barplot_df, labels = ~labels, parents = ~parents, values = ~values,type = 'sunburst', branchvalues = 'remainder')
-  #   }
-  #   
-  #   sunburst %>% layout(
-  #     title="Module Node Annotations")
-  #   sunburst
-  #   }
-  # )
+  output$barplots <- renderPlotly({
+    axis <- list(
+
+      showline = TRUE,
+      showticklabels = F,
+      mirror="ticks",
+      showgrid = F,
+      zeroline = F,
+      linecolor = toRGB("black"),
+      linewidth = 2
+    )
+    if (is.na(selected_node$n)){
+      sunburst = plotly_empty() %>%
+        add_annotations(text = "Select a Cluster for Annotation Details", showarrow = F) %>%
+        layout(xaxis = axis, yaxis = axis)
+
+    }
+
+    else{
+      barplots <- get_anno_data(R, selected_node$n)
+      sunburst <-subplot(barplots, margin=0.09)
+    }
+
+    sunburst %>% layout(
+      title="Module Node Annotations")
+    sunburst
+    }
+  )
 
 
 }
