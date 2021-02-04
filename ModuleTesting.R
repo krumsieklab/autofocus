@@ -44,7 +44,7 @@ find_sig_clusts <- function(
                                                                         as.matrix(R$samples[[phenotype]]), 
                                                                         confounders, 
                                                                         score_method,
-                                                                        return_BIC = T) } %>% round(digits=5)
+                                                                        return_BIC = T) } %>% unlist() %>% round(digits=5)
     
     R$clust_info$pvals <- p_adjust_wrapper(unlist(allpvals),
                                 inds,
@@ -59,7 +59,7 @@ find_sig_clusts <- function(
     print(signif)
     R$colors <- mapply(function(i) get_node_color(R, i, signif, node_color, node_color_light), 1:nnodes(R$HCL))
   
-    to_remove <- c("data", "dist")
+    to_remove <- c("data", "dist","C")
     R[!(names(R) %in% to_remove)]  
 }
 

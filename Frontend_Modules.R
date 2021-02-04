@@ -107,13 +107,23 @@ get_anno_data <- function(
         freqs<-freqs[order(-freqs$Freq)[1:10],]
       }
       names(freqs) <- c(colnames(mat)[n], "count")
-      ggplot(freqs, aes(x=freqs[,1],y=count,fill =freqs[,1]))+
+       ggplotly(ggplot(freqs, aes(x=freqs[,1],y=count,fill =freqs[,1]))+
         geom_bar(stat="identity")+
         coord_flip() +
-        xlab(colnames(mat)[n])+
         theme(panel.background = element_blank(), panel.grid.major=element_blank(), legend.position="none")+
         geom_text(aes(x = freqs[,1], y = count, label = count))+
-        scale_x_discrete(labels=add_line_format(freqs[,1]))
+        scale_x_discrete(labels=add_line_format(freqs[,1])))%>% add_annotations(
+          text =colnames(mat)[n],
+          x = 0,
+          y = 1,
+          yref = "paper",
+          xref = "paper",
+          xanchor = "left",
+          yanchor = "top",
+          yshift = 20,
+          showarrow = FALSE,
+          font = list(size = 15)
+        )
     }
   })
   
