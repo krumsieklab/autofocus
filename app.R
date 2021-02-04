@@ -4,7 +4,8 @@ source(codes.makepath("autofocus/Frontend_Modules.R"))
 
 base::load(file=data.makepath("results/Annalise/QD_R.rda"))
 R<-QD_results_lm
-R$annos<-R$annos[,c("platform","SUB_PATHWAY","SUPER_PATHWAY")]
+columns_to_include <- c("platform","SUB_PATHWAY","SUPER_PATHWAY")
+R$annos<-R$annos[,columns_to_include]
 body <- dashboardBody(
   fluidRow(tabBox(title=NULL,width=12,
                   tabPanel("Tree View",plotlyOutput("dendro")),

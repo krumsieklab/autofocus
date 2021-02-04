@@ -101,6 +101,7 @@ get_anno_data <- function(
   mat <- R$annos[R$clusts[[i]],]
   lapply(1:length(colnames(mat)),function(n){
     if (!all(is.na(mat[,n]))){
+      missing_vals<-sum(is.na(mat[,n]))
       freqs<- data.frame(table(mat[,n]))
       if (nrow(freqs)>10)
       {
@@ -112,7 +113,8 @@ get_anno_data <- function(
         coord_flip() +
         theme(panel.background = element_blank(), panel.grid.major=element_blank(), legend.position="none")+
         geom_text(aes(x = freqs[,1], y = count, label = count))+
-        scale_x_discrete(labels=add_line_format(freqs[,1])))%>% add_annotations(
+        scale_x_discrete(labels=add_line_format(freqs[,1]))) %>% 
+         add_annotations(
           text =colnames(mat)[n],
           x = 0,
           y = 1,
@@ -120,10 +122,22 @@ get_anno_data <- function(
           xref = "paper",
           xanchor = "left",
           yanchor = "top",
-          yshift = 20,
+          yshift = 30,
           showarrow = FALSE,
           font = list(size = 15)
-        )
+        ) %>% 
+         add_annotations(
+           text =paste("Nodes with no annotation: ",missing_vals),
+           x = 0,
+           y = 1,
+           yref = "paper",
+           xref = "paper",
+           xanchor = "left",
+           yanchor = "top",
+           yshift = 10,
+           showarrow = FALSE,
+           font = list(size = 12)
+         )
     }
   })
   
