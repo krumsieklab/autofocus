@@ -57,7 +57,7 @@ find_sig_clusts <- function(
     # determine significant nodes to be colored
     signif <- which(R$clust_info$pvals<0.05)
     print(signif)
-    R$colors <- mapply(function(i) get_node_color(R, i, signif, node_color, node_color_light), 1:nnodes(R$HCL))
+    R$clust_info$colors <- mapply(function(i) get_node_color(R, i, signif, node_color, node_color_light), 1:nnodes(R$HCL))
   
     to_remove <- c("data", "dist","C")
     R[!(names(R) %in% to_remove)]  
