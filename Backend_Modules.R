@@ -224,7 +224,7 @@ scoring_func_wrapper <- function(
     else{
       return (score_regularized(R$data[,members],
                      phenotype_vec,
-                     as.matrix(R$samples[,confounders]),
+                     data.frame(R$samples[,confounders]),
                      dof,
                      family,
                      return_BIC))
@@ -281,16 +281,16 @@ score_regularized <- function(
   
   #Center data
   centered_dat <- scale(data, center = T, scale = F)
-  
-  full_data <- cbind(centered_dat, confounders) %>% as.matrix()
-  
+  full_data<-data.frame(centered_dat, confounders)
+  full_data <-as.matrix(as.data.frame(lapply(full_data, as.numeric)))
+  print(typeof(full_data[,4]))
   if (family == "binomial"){
     phenotype_vec <- phenotype_vec %>% as.factor()
   }
   
   # Degrees of freedom exceeds features, no regularization
   if (dof >= ncol(full_data)){
-    gn <- glm(phenotype~full_data-1, family = family)
+    gn <- glm(phenotype_vec~full_data-1, family = family)
     dof <- ncol(full_data)
   }
   
@@ -308,13 +308,14 @@ score_regularized <- function(
   }
   
   # Base model with only confounders
+  confounders<- as.matrix(as.data.frame(lapply(confounders, as.numeric)))
   gn_conf <- glm(phenotype_vec~confounders-1, family =family)
   
   # BIC calculation
   if(return_BIC){
     tLL <- -deviance(gn)
     k <- dof
-    n <- gn$nobs
+    n <- nobs(gn)
     BIC<-log(n)*k - tLL
     return(BIC)
   }

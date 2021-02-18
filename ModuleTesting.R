@@ -24,45 +24,50 @@ find_sig_clusts <- function(
   node_color = "green",
   node_color_light = "lightgreen")
   {
-    if (cores>1) doParallel::registerDoParallel(cores=cores)
-   
-   ## calculate p-values
-    
-    print("Calculating pvals")
-    
-    allpvals <- foreach(i = 1:nnodes(R$HCL)) %dopar% {scoring_func_wrapper(i, 
-                                                                           R, 
-                                                                           R$samples[[phenotype]], 
-                                                                           confounders, 
-                                                                           score_method) }
-    inds <- which(!is.na(allpvals))
+  if (sum(is.na(R$samples[[phenotype]]))>0){
+    nas<- which(is.na(R$samples[[phenotype]]))
+    R$samples<-R$samples[-nas,]
+    R$data<-R$data[-nas,]
+  }
+  if (cores>1) doParallel::registerDoParallel(cores=cores)
+ 
+ ## calculate p-values
+  
+  print("Calculating pvals")
+  
+  allpvals <- foreach(i = 1:nnodes(R$HCL)) %dopar% {scoring_func_wrapper(i, 
+                                                                         R, 
+                                                                         R$samples[[phenotype]], 
+                                                                         confounders, 
+                                                                         score_method) }
+  inds <- which(!is.na(allpvals))
 
-    print("Calculating BIC")
-    
-    R$clust_info$BIC <- foreach(i = 1:nnodes(R$HCL)) %dopar% {scoring_func_wrapper(i, 
-                                                                        R, 
-                                                                        as.matrix(R$samples[[phenotype]]), 
-                                                                        confounders, 
-                                                                        score_method,
-                                                                        return_BIC = T) } %>% unlist() %>% round(digits=5)
-    print("Performing P-value adjustment")
-    
-    R$clust_info$pvals <- p_adjust_wrapper(unlist(allpvals),
-                                inds,
-                                R,
-                                as.matrix(R$samples[[phenotype]]),
-                                confounders,
-                                score_method = score_method,
-                                adjust_method) %>% round(digits=5)
+  print("Calculating BIC")
   
-    # determine significant nodes to be colored
-    signif <- which(R$clust_info$pvals<0.05)
-    
-    # Color based on BIC 
-    R$clust_info$colors <- mapply(function(i) get_node_color(R, i, signif, node_color, node_color_light), 1:nnodes(R$HCL))
+  R$clust_info$BIC <- foreach(i = 1:nnodes(R$HCL)) %dopar% {scoring_func_wrapper(i, 
+                                                                      R, 
+                                                                      as.matrix(R$samples[[phenotype]]), 
+                                                                      confounders, 
+                                                                      score_method,
+                                                                      return_BIC = T) } %>% unlist() %>% round(digits=5)
+  print("Performing P-value adjustment")
   
-    to_remove <- c("data", "dist","C")
-    R[!(names(R) %in% to_remove)]  
+  R$clust_info$pvals <- p_adjust_wrapper(unlist(allpvals),
+                              inds,
+                              R,
+                              as.matrix(R$samples[[phenotype]]),
+                              confounders,
+                              score_method = score_method,
+                              adjust_method) %>% round(digits=5)
+
+  # determine significant nodes to be colored
+  signif <- which(R$clust_info$pvals<0.05)
+  
+  # Color based on BIC 
+  R$clust_info$colors <- mapply(function(i) get_node_color(R, i, signif, node_color, node_color_light), 1:nnodes(R$HCL))
+
+  to_remove <- c("data", "dist","C")
+  R[!(names(R) %in% to_remove)]  
 }
 
 #### Color Nodes ####
