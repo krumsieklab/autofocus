@@ -45,6 +45,7 @@ find_sig_clusts <- function(
                                                                         confounders, 
                                                                         score_method,
                                                                         return_BIC = T) } %>% unlist() %>% round(digits=5)
+    print("Performing P-value adjustment")
     
     R$clust_info$pvals <- p_adjust_wrapper(unlist(allpvals),
                                 inds,
@@ -56,7 +57,8 @@ find_sig_clusts <- function(
   
     # determine significant nodes to be colored
     signif <- which(R$clust_info$pvals<0.05)
-    print(signif)
+    
+    # Color based on BIC 
     R$clust_info$colors <- mapply(function(i) get_node_color(R, i, signif, node_color, node_color_light), 1:nnodes(R$HCL))
   
     to_remove <- c("data", "dist","C")
@@ -85,7 +87,10 @@ get_node_color <- function(
   hc <- R$HCL
   internal_nodes <- dim(hc$merge)[1]
   if (i %in% signif[!is.na(signif)]){
+    # Leaf Case
     if (i > (internal_nodes)) return(node_color)
+    
+    # Internal node case
     else {
       
       children <- hc$merge[i,]

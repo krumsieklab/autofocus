@@ -1,7 +1,14 @@
 ## Backend Modules ###
+suppressPackageStartupMessages(library(dendextend))
+suppressPackageStartupMessages(library(magrittr))
+suppressPackageStartupMessages(library(parallel))
+suppressPackageStartupMessages(library(foreach))
+suppressPackageStartupMessages(library(cluster))
+suppressPackageStartupMessages(library(SummarizedExperiment))
+suppressPackageStartupMessages(library(glmnet))
+
 ## Hierarchical Clustering Module ####
 
-library(glmnet)
 ## Distance Metric ##
 #' abs_cor_dist
 #' 
@@ -316,8 +323,8 @@ score_regularized <- function(
   
   # BIC calculation
   if(return_BIC){
-    tLL <- gn$nulldev - deviance(gn)
-    k <- (dof - dim(confounders)[2])
+    tLL <- -deviance(gn)
+    k <- dof
     n <- gn$nobs
     BIC<-log(n)*k - tLL
     return(BIC)
@@ -399,7 +406,7 @@ adjust_wy <- function(
   phenotype_vec,
   confounders, 
   score_method,
-  nrand = 1000
+  nrand = 10
 ){
   #### WY p-values ----
   ## -> randomize outcome, run all tests, record smallest p-value of each iteration

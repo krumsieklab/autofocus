@@ -59,16 +59,21 @@ initialize_R <- function(
   cores
 ){
   
+  # Organize input data
   R <- list(data = data.matrix, samples = sample.data, annos = mol.data)
+  # Calculate correlations between biomolecules
   R$C <- cor(data.matrix)
   
+  # Calculate hierarchical structure, order of nodes
   R$HCL <- R %>% get_dendro(method = "average", cores)
   R$dend_data <- ggdendro::dendro_data(as.dendrogram(R$HCL), type = "rectangle")
   R$order <- get_dend_indices(R, dim(R$HCL$merge)[1], c())
   
-  R$platforms <- unique(R$annos$platform)
+  # Get all clusters in the hierarchical tree
   R$clusts <- lapply(1:dim(R$HCL$merge)[1], function(x) get_members(R, x))
   dend_xy <- R$HCL %>% as.dendrogram %>%get_nodes_xy()
+  
+  # Get coordinate information
   parents <- unlist(lapply(1:nnodes(R$HCL), function(i) get_parent(R,i)))
   coord_x <- unlist(lapply(1:nnodes(R$HCL), function(i) round(dend_xy[which(R$order==i),1], digits = 10)))
   coord_y <- unlist(lapply(1:nnodes(R$HCL), function(i) round(dend_xy[which(R$order==i),2],digits= 10)))
@@ -82,6 +87,17 @@ initialize_R <- function(
   R
 }
 
+#### Get parent of a cluster ####
+#' get_parent
+#' 
+#' Recursively collects the indices of 
+#' leaves that are descendents of a module
+#'
+#' @param R R struct
+#' @param i index of module we are finding the members of
+#' @param cl vector to collect node indices
+#' 
+#' @return vector of indices of leaves in a module 
 
 get_parent <- function(
   R,

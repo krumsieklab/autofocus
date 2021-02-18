@@ -26,7 +26,11 @@ get_node_label <- function(
   i
 ){
   internal_nodes <- dim(R$HCL$merge)[1]
+  
+  # Leaf Case
   if (i > (internal_nodes)) return(R$HCL$labels[(i - internal_nodes)])
+  
+  #Internal node case
   else return(paste("Cluster ID:",R$clust_info$ClusterID[[i]] ,"BIC: ", round( R$clust_info$BIC[[i]], digits = 3), ", p-value: ", R$clust_info$pvals[i]))
 }
 
@@ -45,40 +49,20 @@ get_node_label <- function(
 plot_dend<-function(
   R
 ){
+  # Start plotly
   R$clust_info %>% plot_ly(x = ~Coord_X,
           y = ~Coord_Y) %>% 
-  add_segments(
+  # Add edges between nodes
+   add_segments(
     x=R$dend_data$segments$x, 
     xend=R$dend_data$segments$xend, 
     y=R$dend_data$segments$y, 
     yend=R$dend_data$segments$yend)%>%
+  # Add node markers
   add_trace(type='scatter',
             mode = "markers",
             text = mapply(function(i) get_node_label(R, i), 1:nnodes(R$HCL)),
             marker = list(color = ~colors, size = 9))
-}
-
-
-
-#### Get platform colors ####
-#' get_plat_colors
-#' 
-#' Assign a unique color to each platform in our dataset
-#'
-#' @param R R struct
-#' @param plat_list lis of platforms in our data
-#' 
-#' @return vector of colors corresponding to each platform
-#' 
-get_plat_colors <- function(
-  R,
-  plat_list
-){
-  qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
-  col_vector = unlist(mapply(brewer.pal, 
-                               qual_col_pals$maxcolors, 
-                               rownames(qual_col_pals)))[1:length(R$platforms)]
-  mapply(function(x) col_vector[which(R$platform == x)], plat_list)
 }
 
 
@@ -98,16 +82,23 @@ get_anno_data <- function(
   R,
   i
 ){
+  # Get annotation matrix for selected cluster
   mat <- R$annos[R$clusts[[i]],]
+  
   lapply(1:length(colnames(mat)),function(n){
     if (!all(is.na(mat[,n]))){
       missing_vals<-sum(is.na(mat[,n]))
       freqs<- data.frame(table(mat[,n]))
-      if (nrow(freqs)>10)
+      
+      # Show 8 most frequent annotations
+      if (nrow(freqs)>8)
       {
-        freqs<-freqs[order(-freqs$Freq)[1:10],]
+        freqs<-freqs[order(-freqs$Freq)[1:8],]
       }
+      
       names(freqs) <- c(colnames(mat)[n], "count")
+      
+      # Make bar chart for each annotation
        ggplotly(ggplot(freqs, aes(x=freqs[,1],y=count,fill =freqs[,1]))+
         geom_bar(stat="identity")+
         coord_flip() +
@@ -223,4 +214,24 @@ add_line_format <- function(names){
 #   network
 # }
 
+#### Get platform colors ####
+#' get_plat_colors
+#' 
+#' Assign a unique color to each platform in our dataset
+#'
+#' @param R R struct
+#' @param plat_list lis of platforms in our data
+#' 
+#' @return vector of colors corresponding to each platform
+#' 
+# get_plat_colors <- function(
+#   R,
+#   plat_list
+# ){
+#   qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+#   col_vector = unlist(mapply(brewer.pal, 
+#                                qual_col_pals$maxcolors, 
+#                                rownames(qual_col_pals)))[1:length(R$platforms)]
+#   mapply(function(x) col_vector[which(R$platform == x)], plat_list)
+# }
 
