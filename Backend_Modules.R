@@ -290,13 +290,7 @@ score_regularized <- function(
   
   # Degrees of freedom exceeds features, no regularization
   if (dof >= ncol(full_data)){
-    gn <- glmnet(x = full_data, 
-               y = phenotype_vec,
-               family = family, 
-               intercept = F,
-               alpha = 0,
-               standardize = F,
-               lambda = 0)
+    gn <- glm(phenotype~full_data-1, family = family)
     dof <- ncol(full_data)
   }
   
@@ -314,12 +308,7 @@ score_regularized <- function(
   }
   
   # Base model with only confounders
-  gn_conf <- glmnet(x = confounders,
-                    y = phenotype_vec,
-                    family =family,
-                    intercept = F,
-                    lambda = 0,
-                    standardize = F)
+  gn_conf <- glm(phenotype_vec~confounders-1, family =family)
   
   # BIC calculation
   if(return_BIC){
