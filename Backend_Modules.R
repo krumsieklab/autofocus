@@ -283,7 +283,6 @@ score_regularized <- function(
   centered_dat <- scale(data, center = T, scale = F)
   full_data<-data.frame(centered_dat, confounders)
   full_data <-as.matrix(as.data.frame(lapply(full_data, as.numeric)))
-  print(typeof(full_data[,4]))
   if (family == "binomial"){
     phenotype_vec <- phenotype_vec %>% as.factor()
   }
