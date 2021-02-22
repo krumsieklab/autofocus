@@ -24,11 +24,6 @@ find_sig_clusts <- function(
   node_color = "green",
   node_color_light = "lightgreen")
   {
-  if (sum(is.na(R$samples[[phenotype]]))>0){
-    nas<- which(is.na(R$samples[[phenotype]]))
-    R$samples<-R$samples[-nas,]
-    R$data<-R$data[-nas,]
-  }
   if (cores>1) doParallel::registerDoParallel(cores=cores)
  
  ## calculate p-values

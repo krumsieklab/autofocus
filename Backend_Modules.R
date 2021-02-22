@@ -287,6 +287,10 @@ score_regularized <- function(
     phenotype_vec <- phenotype_vec %>% as.factor()
   }
   
+  no_na<-complete.cases(full_data,phenotype_vec)
+  full_data<-full_data[no_na,]
+  confounders<-confounders[no_na,]
+  phenotype_vec<-phenotype_vec[no_na]
   # Degrees of freedom exceeds features, no regularization
   if (dof >= ncol(full_data)){
     gn <- glm(phenotype_vec~full_data-1, family = family)
