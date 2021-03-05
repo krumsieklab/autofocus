@@ -6,7 +6,8 @@ suppressPackageStartupMessages(library(foreach))
 suppressPackageStartupMessages(library(cluster))
 suppressPackageStartupMessages(library(SummarizedExperiment))
 suppressPackageStartupMessages(library(glmnet))
-
+library(RhpcBLASctl)
+blas_set_num_threads(1)
 ## Hierarchical Clustering Module ####
 
 ## Distance Metric ##
@@ -291,14 +292,23 @@ score_regularized <- function(
   full_data<-full_data[no_na,]
   confounders<-confounders[no_na,]
   phenotype_vec<-phenotype_vec[no_na]
+  
+  # Base model with only confounders
+  confounders<- as.matrix(as.data.frame(lapply(confounders, as.numeric)))
+  gn_conf <- glm(phenotype_vec~confounders-1, family =family)
+  
   # Degrees of freedom exceeds features, no regularization
   if (dof >= ncol(full_data)){
     gn <- glm(phenotype_vec~full_data-1, family = family)
-    dof <- ncol(full_data)
+
+    #pval <- anova(gn,gn_conf,test="LRT")$`Pr(>Chi)`[2]
+    pval <- -expm1(pchisq(deviance(gn) - deviance(gn_conf),df = (dof - dim(confounders)[2]),log.p = T))
+    
   }
   
   # Regularization
   else{
+    
     L <- get_lambda(centered_dat, (dof - dim(confounders)[2]))
     gn <- glmnet(x = full_data, 
                  y = phenotype_vec, 
@@ -308,11 +318,10 @@ score_regularized <- function(
                  standardize = F,
                  lambda = L/nrow(data),
                  penalty.factor = c(rep(1, dim(data)[2]), rep(0, dim(confounders)[2])))
+
+    pval <- -expm1(pchisq(deviance(gn) - deviance(gn_conf),df = (dof - dim(confounders)[2]),log.p = T))
+
   }
-  
-  # Base model with only confounders
-  confounders<- as.matrix(as.data.frame(lapply(confounders, as.numeric)))
-  gn_conf <- glm(phenotype_vec~confounders-1, family =family)
   
   # BIC calculation
   if(return_BIC){
@@ -322,11 +331,7 @@ score_regularized <- function(
     BIC<-log(n)*k - tLL
     return(BIC)
   }
-  
-  # p-val of difference between model with and without data
-  d_dev = deviance(gn_conf) - deviance(gn)
-  print(-expm1( pchisq( d_dev,df = (dof - dim(confounders)[2]), log.p = T)))
-  -expm1( pchisq( d_dev,df = (dof - dim(confounders)[2]), log.p = T))
+  pval
 }
     
   

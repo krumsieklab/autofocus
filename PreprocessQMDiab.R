@@ -10,7 +10,7 @@ library("psych")
 library(MetaboTools)
 # Commit number 1030613ae4bc88ec4d98a466fe2251b70f60a5e8 10/10/20
 if (!exists('qmdiab')){
-  load(data.makepath("shareddata/QMDiab/qmdiab_2019_03_13.rda"))
+  base::load("~/Box/shareddata/QMDiab/qmdiab_2019_03_13.rda")
 }
 
 repeats <- function(
@@ -236,6 +236,8 @@ process_IgG = preprocess_steps(qmdiab$rawIgG)
 
 platform_list <- list(process_PM, process_UM, process_SM, process_HDF, process_CM, process_BM, process_BRAIN, process_SOMA, process_LD, process_IgA, process_GP, process_IgG)
 all_platforms <- bind_SE_no_NA(platform_list)
+
+rm(platform_list, process_PM, process_UM, process_SM, process_HDF,process_CM, process_BM,process_BRAIN,process_SOMA,process_IgA,process_LD,process_IgG, process_GP)
 #ks <- lapply(1:nrow(all_platforms), function(x) ks.test(scale(assay(all_platforms)[x,]), pnorm)$p.value)
 #names <- c("PM", "UM", "SM", "HDF", "CM","BM","BRAIN","SOMA","LD", "IgA","GP","IgG")
 # samples available in all omics 
