@@ -301,8 +301,8 @@ score_regularized <- function(
   if (dof >= ncol(full_data)){
     gn <- glm(phenotype_vec~full_data-1, family = family)
 
-    #pval <- anova(gn,gn_conf,test="LRT")$`Pr(>Chi)`[2]
-    pval <- -expm1(pchisq(deviance(gn) - deviance(gn_conf),df = (dof - dim(confounders)[2]),log.p = T))
+    pval <- anova(gn,gn_conf,test="LRT")$`Pr(>Chi)`[2]
+    #pval <- -expm1(pchisq(deviance(gn) - deviance(gn_conf),df = (dof - dim(confounders)[2]),log.p = T))
     
   }
   
