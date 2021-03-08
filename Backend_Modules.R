@@ -212,6 +212,7 @@ scoring_func_wrapper <- function(
   } 
   
   else{
+    
     members <-  R$clusts[i][[1]]
   }
   
@@ -289,13 +290,18 @@ score_regularized <- function(
   }
   
   no_na<-complete.cases(full_data,phenotype_vec)
-  full_data<-full_data[no_na,]
+  full_data<-full_data[no_na,] %>% as.matrix()
   confounders<-confounders[no_na,]
   phenotype_vec<-phenotype_vec[no_na]
   
   # Base model with only confounders
-  confounders<- as.matrix(as.data.frame(lapply(confounders, as.numeric)))
-  gn_conf <- glm(phenotype_vec~confounders-1, family =family)
+  if (dim(confounders)[2]!=0){
+    confounders<- as.matrix(as.data.frame(lapply(confounders, as.numeric)))
+    gn_conf <- glm(phenotype_vec~confounders-1, family =family)
+  }
+  else{
+    gn_conf<-glm(phenotype_vec~-1,family=family)
+  }
   
   # Degrees of freedom exceeds features, no regularization
   if (dof >= ncol(full_data)){

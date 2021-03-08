@@ -17,7 +17,7 @@
 find_sig_clusts <- function(
   R, 
   phenotype, 
-  confounders,
+  confounders=NULL,
   score_method = "lm",
   adjust_method = "wy",
   cores = 1, 
