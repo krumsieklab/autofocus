@@ -20,9 +20,7 @@ find_sig_clusts <- function(
   confounders=NULL,
   score_method = "lm",
   adjust_method = "wy",
-  cores = 1, 
-  node_color = "green",
-  node_color_light = "lightgreen")
+  cores = 1)
   {
   if (cores>1) doParallel::registerDoParallel(cores=cores)
  
@@ -59,7 +57,7 @@ find_sig_clusts <- function(
   signif <- which(R$clust_info$pvals<0.05)
   
   # Color based on BIC 
-  R$clust_info$colors <- mapply(function(i) get_node_color(R, i, signif, node_color, node_color_light), 1:nnodes(R$HCL))
+  R$clust_info$colors <- mapply(function(i) get_node_color(R, i, signif), 1:nnodes(R$HCL))
 
   to_remove <- c("data", "dist","C")
   R[!(names(R) %in% to_remove)]  
@@ -80,9 +78,7 @@ find_sig_clusts <- function(
 get_node_color <- function(
   R,
   i,
-  signif,
-  node_color,
-  node_color_light
+  signif
 ){
   hc <- R$HCL
   internal_nodes <- dim(hc$merge)[1]
@@ -98,19 +94,22 @@ get_node_color <- function(
       child2 <- if (children[2]<0) (internal_nodes + abs(children[2])) else children[2]
       
       ## Children aren't significant, combination is
-      if (R$clust_info$pvals[child1] > 0.05 & R$clust_info$pvals[child2] > 0.05) return(node_color)
+      if (R$clust_info$pvals[child1] > 0.05 & R$clust_info$pvals[child2] > 0.05) return("green")
       
       ## Children are significant
       if(R$clust_info$pvals[child1] < 0.05 & R$clust_info$pvals[child2] < 0.05){
         
-        if (R$clust_info$BIC[[i]] < R$clust_info$BIC[[child1]] & R$clust_info$BIC[[i]]<R$clust_info$BIC[[child2]]) return(node_color) else return(node_color_light)
+        if (R$clust_info$BIC[[i]] < R$clust_info$BIC[[child1]] & R$clust_info$BIC[[i]]<R$clust_info$BIC[[child2]]) return("green") else return("yellow")
       }
       
       ## One child is significant
       else {
         sig_child <- if (R$clust_info$pvals[child1] < R$clust_info$pvals[child2]) child1 else child2
         
-        if(R$clust_info$BIC[[i]] < R$clust_info$BIC[[sig_child]]) return(node_color) else return(node_color_light)
+        if(R$clust_info$BIC[[i]] < R$clust_info$BIC[[sig_child]]){return("green")}  
+        else {
+          if (R$clust_info$pval[[i]] < R$clust_info$pval[[sig_child]]) return("yellow") else return("red")
+        }
       }
     }
   }

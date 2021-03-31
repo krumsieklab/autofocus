@@ -28,10 +28,10 @@ get_node_label <- function(
   internal_nodes <- dim(R$HCL$merge)[1]
   
   # Leaf Case
-  if (i > (internal_nodes)) return(R$HCL$labels[(i - internal_nodes)])
+  if (i > (internal_nodes)) return(paste(R$HCL$labels[(i - internal_nodes)] ,"BIC: ", round( R$clust_info$BIC[[i]], digits = 3), ", p-value: ", formatC(R$clust_info$pvals[i],format="e")))
   
   #Internal node case
-  else return(paste("Cluster ID:",R$clust_info$ClusterID[[i]] ,"BIC: ", round( R$clust_info$BIC[[i]], digits = 3), ", p-value: ", R$clust_info$pvals[i]))
+  else return(paste("Cluster ID:",R$clust_info$ClusterID[[i]] ,"BIC: ", round( R$clust_info$BIC[[i]], digits = 3), ", p-value: ",formatC(R$clust_info$pvals[i],format="e")))
 }
 
 

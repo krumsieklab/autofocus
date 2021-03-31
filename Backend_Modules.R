@@ -336,7 +336,7 @@ score_regularized <- function(
     tLL <- -deviance(gn)
     k <- dof
     n <- nobs(gn)
-    BIC<-log(n)*k - tLL
+    BIC <- log(n)*k - tLL
     return(BIC)
   }
   pval

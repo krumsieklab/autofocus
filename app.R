@@ -82,7 +82,7 @@ server <- function(input, output) {
                                           y=c(R$clust_info[selected_node$last,]$Coord_Y, R$clust_info[selected_node$n,]$Coord_Y),
                                           type="scatter",
                                           mode="markers",
-                                          marker = list(color=c(R$colors[selected_node$last],"yellow"), size = 9)))
+                                          marker = list(color=c(R$clust_info$colors[selected_node$last],"yellow"), size = 9)))
     
   })
   observeEvent(event_data("plotly_click"),{
@@ -100,7 +100,7 @@ server <- function(input, output) {
                                                        y=c(R$clust_info[selected_node$last,]$Coord_Y, R$clust_info[selected_node$n,]$Coord_Y),
                                                        type="scatter",
                                                        mode="markers",
-                                                       marker = list(color=c(R$colors[selected_node$last],"yellow"), size = 9)))
+                                                       marker = list(color=c(R$clust_info$colors[selected_node$last],"yellow"), size = 9)))
     }
   })
     
