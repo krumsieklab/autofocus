@@ -84,7 +84,7 @@ get_node_color <- function(
   internal_nodes <- dim(hc$merge)[1]
   if (i %in% signif[!is.na(signif)]){
     # Leaf Case
-    if (i > (internal_nodes)) return(node_color)
+    if (i > (internal_nodes)) return("green")
     
     # Internal node case
     else {
