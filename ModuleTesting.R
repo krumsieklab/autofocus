@@ -108,7 +108,7 @@ get_node_color <- function(
         
         if(R$clust_info$BIC[[i]] < R$clust_info$BIC[[sig_child]]){return("green")}  
         else {
-          if (R$clust_info$pval[[i]] < R$clust_info$pval[[sig_child]]) return("yellow") else return("red")
+          if (R$clust_info$pval[[i]] <= R$clust_info$pval[[sig_child]]) return("yellow") else return("red")
         }
       }
     }
