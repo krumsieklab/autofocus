@@ -245,7 +245,7 @@ scoring_func_wrapper <- function(
       # pca
       pca <- prcomp(centered_dat)
       
-      pc_data<-pca$x[,1:min(length(expvar),(dof-length(confounders)))]
+      pc_data<-pca$x[,1:min(length(members),(dof-length(confounders)))]
       
       # Size of module less than degrees of freedom, no regularization
      return (score_regularized(pc_data, 
