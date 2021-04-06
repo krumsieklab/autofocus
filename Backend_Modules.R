@@ -209,53 +209,75 @@ scoring_func_wrapper <- function(
   # Leaf case
   if (i > dim(me)[1]){
     members <-(i - dim(me)[1])
+    return (score_regularized(R$data[,members],
+                              phenotype_vec,
+                              data.frame(R$samples[,confounders]),
+                              dof,
+                              family,
+                              return_BIC))
   } 
   
   else{
     
     members <-  R$clusts[i][[1]]
-  }
   
-  if (score_method == "lm"){
-    
-    # Number of nodes in module cannot exceed number of samples
-    if (length(members)>length(phenotype_vec)){
-      return(NA)
+    if (score_method == "lm"){
+      
+      # Number of nodes in module cannot exceed number of samples
+      if (length(members)>length(phenotype_vec)){
+        return(NA)
+      }
+      
+      else{
+        return (score_regularized(R$data[,members],
+                       phenotype_vec,
+                       data.frame(R$samples[,confounders]),
+                       dof,
+                       family,
+                       return_BIC))
+      }
     }
-    
-    else{
-      return (score_regularized(R$data[,members],
-                     phenotype_vec,
-                     data.frame(R$samples[,confounders]),
-                     dof,
-                     family,
-                     return_BIC))
+  
+    if (score_method == "pc"){
+      
+      centered_dat <- scale(R$data[,members], center = T, scale = T)
+      
+      # pca
+      pca <- prcomp(centered_dat)
+      
+      pc_data<-pca$x[,1:min(length(expvar),(dof-length(confounders)))]
+      
+      # Size of module less than degrees of freedom, no regularization
+     return (score_regularized(pc_data, 
+                              phenotype_vec, 
+                              data.frame(R$samples[,confounders]), 
+                              dof,
+                              family,
+                              return_BIC))
     }
   }
+}
 
-  if (score_method == "pc"){
-    
-    # desired explained variance
-    dexpvar <- 0.95
+
+pc_plot<-function(R,phenotype_vec){
+
+  mclapply(1:5134, function(i){
+    dof <- get_dof(phenotype_vec)[[1]]
+    members<-R$clusts[[i]]
+    centered_dat <- scale(R$data[,members], center = T, scale = T)
     
     # pca
-    pca <- prcomp(R$data[,members])
+    pca <- prcomp(centered_dat)
     # explained variance
     expvar <- (pca$sdev)^2 / sum(pca$sdev^2)
+    list(length(members),sum(expvar[1:min(length(expvar),dof)]))
     
-    # find number of components when desired explained variance is reached
-    reachp <- which(cumsum(expvar)>=dexpvar)[1]
-    
-    pc_data <- pca$x[,reachp]
-    
-    # Size of module less than degrees of freedom, no regularization
-   return (score_regularized(pc_data, 
-                            phenotype_vec, 
-                            as.matrix(R$samples[,confounders]), 
-                            dof,
-                            family,
-                            return_BIC))
-  }
+  },mc.cores=4)
+  
+  sizes<-unlist(lapply(1:length(pcs),function(i) pcs[i][[1]][[1]]))
+  expvars<-unlist(lapply(1:length(pcs),function(i) pcs[i][[1]][[2]]))
+  
+  data.frame(sizes,expvars)
 }
 ## Module Scoring Function ##
 #' score_regularized
@@ -316,21 +338,21 @@ score_regularized <- function(
   
   # Regularization
   else{
-    
+
     L <- get_lambda(centered_dat, (dof - dim(confounders)[2]))
-    gn <- glmnet(x = full_data, 
-                 y = phenotype_vec, 
-                 family = family, 
+    gn <- glmnet(x = full_data,
+                 y = phenotype_vec,
+                 family = family,
                  intercept = F,
-                 alpha = 0, 
+                 alpha = 0,
                  standardize = F,
                  lambda = L/nrow(data),
                  penalty.factor = c(rep(1, dim(data)[2]), rep(0, dim(confounders)[2])))
 
-    pval <- -expm1(pchisq(deviance(gn) - deviance(gn_conf),df = (dof - dim(confounders)[2]),log.p = T))
+    pval <- pchisq(deviance(gn_conf) - deviance(gn),df = (dof - dim(confounders)[2]),lower.tail=F)
 
   }
-  
+
   # BIC calculation
   if(return_BIC){
     tLL <- -deviance(gn)
