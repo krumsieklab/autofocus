@@ -245,7 +245,7 @@ scoring_func_wrapper <- function(
       # pca
       pca <- prcomp(centered_dat)
       
-      pc_data<-pca$x[,1:min(length(members),(dof-1-length(confounders)))]
+      pc_data<-pca$x[,1:min(length(members),(dof-length(confounders)))]
       
       # Size of module less than degrees of freedom, no regularization
      return (score_regularized(pc_data, 
@@ -259,10 +259,9 @@ scoring_func_wrapper <- function(
 }
 
 
-pc_plot<-function(R,phenotype_vec){
+pc_plot<-function(R,phenotype_vec,num_pcs){
 
-  mclapply(1:5134, function(i){
-    dof <- get_dof(phenotype_vec)[[1]]
+  pcs<-mclapply(1:5134, function(i){
     members<-R$clusts[[i]]
     centered_dat <- scale(R$data[,members], center = T, scale = T)
     
@@ -270,7 +269,7 @@ pc_plot<-function(R,phenotype_vec){
     pca <- prcomp(centered_dat)
     # explained variance
     expvar <- (pca$sdev)^2 / sum(pca$sdev^2)
-    list(length(members),sum(expvar[1:min(length(expvar),dof)]))
+    list(length(members),sum(expvar[1:min(length(expvar),num_pcs)]))
     
   },mc.cores=4)
   
@@ -319,18 +318,18 @@ score_regularized <- function(
   # Base model with only confounders
   if (dim(confounders)[2]!=0){
     confounders<- as.matrix(as.data.frame(lapply(confounders, as.numeric)))
-    gn_conf <- glm(phenotype_vec~confounders, family =family)
+    gn_conf <- glm(phenotype_vec~confounders-1, family =family)
   }
   else{
-    gn_conf<-glm(phenotype_vec~1,family=family)
+    gn_conf<-glm(phenotype_vec~-1,family=family)
   }
   
   # Degrees of freedom exceeds features, no regularization
-  if (dof >= (ncol(full_data)+1)){
+  if (dof >= (ncol(full_data))){
     
     # Set degrees of freedom to that of model (with intercept)
-    dof<-(ncol(full_data)+1)
-    gn <- glm(phenotype_vec~full_data, family = family)
+    dof<-(ncol(full_data))
+    gn <- glm(phenotype_vec~full_data-1, family = family)
 
     pval <- anova(gn,gn_conf,test="LRT")$`Pr(>Chi)`[2]
 
@@ -339,17 +338,17 @@ score_regularized <- function(
   # Regularization
   else{
 
-    L <- get_lambda(centered_dat, (dof - (dim(confounders)[2]+1)))
+    L <- get_lambda(centered_dat, (dof - dim(confounders)[2]))
     gn <- glmnet(x = full_data,
                  y = phenotype_vec,
                  family = family,
-                 intercept = T,
+                 intercept = F,
                  alpha = 0,
                  standardize = F,
                  lambda = L/nrow(data),
                  penalty.factor = c(rep(1, dim(data)[2]), rep(0, dim(confounders)[2])))
 
-    pval <- pchisq(deviance(gn_conf) - deviance(gn),df = (dof - (dim(confounders)[2]+1)),lower.tail=F)
+    pval <- pchisq(deviance(gn_conf) - deviance(gn),df = (dof - (dim(confounders)[2])),lower.tail=F)
 
   }
 
