@@ -247,8 +247,7 @@ scoring_func_wrapper <- function(
       
       pc_data<-pca$x[,1:min(length(members),(dof-length(confounders)))]
       
-      # Size of module less than degrees of freedom, no regularization
-     return (score_regularized(pc_data, 
+      return (score_regularized(pc_data, 
                               phenotype_vec, 
                               data.frame(R$samples[,confounders]), 
                               dof,
@@ -306,30 +305,32 @@ score_regularized <- function(
   centered_dat <- scale(data, center = T, scale = F)
   full_data<-data.frame(centered_dat, confounders)
   full_data <-as.matrix(as.data.frame(lapply(full_data, as.numeric)))
+  
   if (family == "binomial"){
     phenotype_vec <- phenotype_vec %>% as.factor()
   }
   
+  #Remove data points with NAs
   no_na<-complete.cases(full_data,phenotype_vec)
   full_data<-full_data[no_na,] %>% as.matrix()
   confounders<-confounders[no_na,]
   phenotype_vec<-phenotype_vec[no_na]
   
-  # Base model with only confounders
+  # Base model with only confounders (or only intercept if no confounders)
   if (dim(confounders)[2]!=0){
     confounders<- as.matrix(as.data.frame(lapply(confounders, as.numeric)))
-    gn_conf <- glm(phenotype_vec~confounders-1, family =family)
+    gn_conf <- glm(phenotype_vec~confounders, family =family)
   }
   else{
-    gn_conf<-glm(phenotype_vec~-1,family=family)
+    gn_conf<-glm(phenotype_vec~1,family=family)
   }
   
   # Degrees of freedom exceeds features, no regularization
-  if (dof >= (ncol(full_data))){
+  if (dof >= ncol(full_data)){
     
     # Set degrees of freedom to that of model (with intercept)
-    dof<-(ncol(full_data))
-    gn <- glm(phenotype_vec~full_data-1, family = family)
+    dof<-ncol(full_data)+1
+    gn <- glm(phenotype_vec~full_data, family = family)
 
     pval <- anova(gn,gn_conf,test="LRT")$`Pr(>Chi)`[2]
 
@@ -337,12 +338,11 @@ score_regularized <- function(
   
   # Regularization
   else{
-
     L <- get_lambda(centered_dat, (dof - dim(confounders)[2]))
     gn <- glmnet(x = full_data,
                  y = phenotype_vec,
                  family = family,
-                 intercept = F,
+                 intercept = T,
                  alpha = 0,
                  standardize = F,
                  lambda = L/nrow(data),
@@ -456,3 +456,4 @@ adjust_wy <- function(
   }
   sapply(allpvals, function(pval){sum(wy.null<pval)}) / nrand
 }
+
