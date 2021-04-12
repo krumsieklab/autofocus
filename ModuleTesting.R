@@ -88,28 +88,22 @@ get_node_color <- function(
     
     # Internal node case
     else {
-      
       children <- hc$merge[i,]
       child1 <- if (children[1]<0) (internal_nodes + abs(children[1])) else children[1]
       child2 <- if (children[2]<0) (internal_nodes + abs(children[2])) else children[2]
       
-      ## Children aren't significant, combination is
-      if (R$clust_info$pvals[child1] > 0.05 & R$clust_info$pvals[child2] > 0.05) return("green")
-      
-      ## Children are significant
-      if(R$clust_info$pvals[child1] < 0.05 & R$clust_info$pvals[child2] < 0.05){
-        
-        if (R$clust_info$BIC[[i]] < R$clust_info$BIC[[child1]] & R$clust_info$BIC[[i]]<R$clust_info$BIC[[child2]]) return("green") else return("yellow")
+      ## Combination is more significant than children
+      if (R$clust_info$pval[[i]] < min(R$clust_info$pvals[child1],R$clust_info$pvals[child2])) {
+        return("green")
       }
       
-      ## One child is significant
+      ## Children are significant, combination is less significant
+      if (max(R$clust_info$pvals[child1],R$clust_info$pvals[child2]) < 0.05 
+          & R$clust_info$pval[[i]] > max(R$clust_info$pvals[child1],R$clust_info$pvals[child2])) {
+        return("orange")
+      }
       else {
-        sig_child <- if (R$clust_info$pvals[child1] < R$clust_info$pvals[child2]) child1 else child2
-        
-        if(R$clust_info$BIC[[i]] < R$clust_info$BIC[[sig_child]]){return("green")}  
-        else {
-          if (R$clust_info$pval[[i]] <= R$clust_info$pval[[sig_child]]) return("yellow") else return("red")
-        }
+        return("red")
       }
     }
   }
