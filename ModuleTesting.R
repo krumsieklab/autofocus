@@ -20,6 +20,7 @@ find_sig_clusts <- function(
   confounders=NULL,
   score_method = "lm",
   adjust_method = "wy",
+  nrand = 1000,
   cores = 1)
   {
   if (cores>1) doParallel::registerDoParallel(cores=cores)
@@ -51,7 +52,8 @@ find_sig_clusts <- function(
                               as.matrix(R$samples[[phenotype]]),
                               confounders,
                               score_method = score_method,
-                              adjust_method) %>% round(digits=5)
+                              adjust_method,
+                              nrand) %>% round(digits=5)
 
   # determine significant nodes to be colored
   signif <- which(R$clust_info$pvals<0.05)
@@ -97,9 +99,8 @@ get_node_color <- function(
         return("green")
       }
       
-      ## Children are significant, combination is less significant
-      if (max(R$clust_info$pvals[child1],R$clust_info$pvals[child2]) < 0.05 
-          & R$clust_info$pval[[i]] > max(R$clust_info$pvals[child1],R$clust_info$pvals[child2])) {
+      ## Children are significant, combination is not more significant
+      if (max(R$clust_info$pvals[child1],R$clust_info$pvals[child2]) < 0.05) {
         return("orange")
       }
       else {

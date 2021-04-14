@@ -389,7 +389,8 @@ p_adjust_wrapper <- function(
   phenotype_vec,
   confounders,
   score_method,
-  adjust_method
+  adjust_method,
+  nrand
 ){
   
   # West-fall young adjustment
@@ -400,7 +401,8 @@ p_adjust_wrapper <- function(
       R,
       phenotype_vec,
       confounders,
-      score_method
+      score_method,
+      nrand
     ))
   }
   
@@ -433,7 +435,7 @@ adjust_wy <- function(
   phenotype_vec,
   confounders, 
   score_method,
-  nrand = 1000
+  nrand
 ){
   #### WY p-values ----
   ## -> randomize outcome, run all tests, record smallest p-value of each iteration
