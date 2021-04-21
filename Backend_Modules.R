@@ -254,13 +254,31 @@ scoring_func_wrapper <- function(
                               family,
                               return_BIC))
     }
+  
+    else{
+      centered_dat <- scale(R$data[,members], center = T, scale = T)
+      
+      # pca
+      pca <- prcomp(centered_dat)
+      
+      pc_data<-pca$x[,1:min(length(members),5)]
+      
+      return (score_regularized(pc_data, 
+                                phenotype_vec, 
+                                data.frame(R$samples[,confounders]), 
+                                dof,
+                                family,
+                                return_BIC))
+    }
   }
 }
 
 
 pc_plot<-function(R,phenotype_vec,num_pcs){
 
-  pcs<-mclapply(1:5134, function(i){
+  expvars<-c()
+  sizes<-c()
+  for (i in 1:length(R$clusts)){
     members<-R$clusts[[i]]
     centered_dat <- scale(R$data[,members], center = T, scale = T)
     
@@ -268,12 +286,13 @@ pc_plot<-function(R,phenotype_vec,num_pcs){
     pca <- prcomp(centered_dat)
     # explained variance
     expvar <- (pca$sdev)^2 / sum(pca$sdev^2)
-    list(length(members),sum(expvar[1:min(length(expvar),num_pcs)]))
-    
-  },mc.cores=4)
+    #list(length(members),sum(expvar[1:min(length(expvar),num_pcs)]))
+    sizes<-c(sizes,length(members))
+    expvars<-c(expvars,sum(expvar[1:min(length(expvar),num_pcs)]))
+  }
   
-  sizes<-unlist(lapply(1:length(pcs),function(i) pcs[i][[1]][[1]]))
-  expvars<-unlist(lapply(1:length(pcs),function(i) pcs[i][[1]][[2]]))
+  #sizes<-unlist(lapply(1:length(pcs),function(i) pcs[i][[1]][[1]]))
+  #expvars<-unlist(lapply(1:length(pcs),function(i) pcs[i][[1]][[2]]))
   
   data.frame(sizes,expvars)
 }
