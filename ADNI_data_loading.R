@@ -9,6 +9,31 @@ bp1 =  read.csv2(data.makepath("ADNI/adni1go2.p180.medadjusted.csv"), na.string=
 ntl =  read.csv2(data.makepath("ADNI/adni1.lipids.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
 mkl = read.csv2(data.makepath("ADNI/adni1.meikle.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
 
+
+bind_SE_no_NA <- function(
+  platforms  # SummarizedExperiments to combine
+){
+  for (platform in platforms){
+    if (exists("dfTot")){
+      missing1 <- setdiff(colnames(rowData(dfTot)), colnames(rowData(platform)))
+      missing2 <- setdiff(colnames(rowData(platform)), colnames(rowData(dfTot)))
+      for (colname in missing1){
+        rowData(platform)[[colname]] <- rep(NA, nrow(platform))
+      }
+      for (colname in missing2){
+        rowData(dfTot)[[colname]]<- rep(NA, nrow(dfTot))
+      }
+      
+      overlap <- intersect(colnames(dfTot), colnames(platform))
+      dfTot <-  rbind(dfTot[,overlap], platform[,overlap])
+    }
+    else{
+      dfTot <-platform
+    }
+  }
+  dfTot
+}
+
 bba.overlap <- intersect(phe$RID, bba$RID)
 SE.bba <- SummarizedExperiment(assays = t(bba[,3:ncol(bba)]), 
                                colData = phe[which(phe$RID %in% bba.overlap),])

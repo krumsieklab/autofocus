@@ -9,20 +9,14 @@ source(codes.makepath("autofocus/Backend_Modules.R"))
 source(codes.makepath("autofocus/initialize.R"))
 source(codes.makepath("autofocus/ModuleTesting.R"))
 
-# Load QMDiab
-load(data.makepath("QMDiab/qmdiab_2019_03_13.rda"))
-source(codes.makepath("autofocus/PreprocessQMDiab.R"))
-
-# Load ADNI
-load(data.makepath("ADNI/ADNI_data_for_Annalise/ADNI_data_for_Annalise.RData"))
-source(codes.makepath("autofocus/ADNI_data_loading.R"))
-
-# Load ROSMAP
-load(data.makepath("ROSMAP/processed_data/autofocus/2021-03-04_ROSMAP_514Brains_AC.rds"))
 
 ####ADNI####
 
 get_adni_R<- function(){
+  
+  # Load ADNI
+  load(data.makepath("ADNI/ADNI_data_for_Annalise/ADNI_data_for_Annalise.RData"))
+  source(codes.makepath("autofocus/ADNI_data_loading.R"))
 
   adni.data<- t(assay(ADNI_platforms))
   
@@ -50,6 +44,11 @@ test_ADNI <- function(adni_R,score_method="pc",adjust_method="wy",cores=40){
 #### QMDIAB ####
 
 get_qd_R<-function(){
+  
+  # Load QMDiab
+  load(data.makepath("QMDiab/qmdiab_2019_03_13.rda"))
+  source(codes.makepath("autofocus/PreprocessQMDiab.R"))
+  
   names(all_platforms)<-rowData(all_platforms)$name
   QD <- initialize_R(t(assay(all_platforms)), 
                    sample.data = colData(all_platforms),
@@ -71,6 +70,10 @@ test_QMDiab <- function(qd_R, score_method="pc",adjust_method="wy",cores=40){
 #### ROSMAP ####
 
 get_rosmap_R<-function(){
+  
+  # Load ROSMAP
+  load(data.makepath("ROSMAP/processed_data/autofocus/2021-03-04_ROSMAP_514Brains_AC.rds"))
+  
 
   names(AC$D)<-rowData(AC$D)$BIOCHEMICAL
 
