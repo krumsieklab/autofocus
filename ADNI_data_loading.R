@@ -3,11 +3,11 @@
 library(dplyr)
 # reading data sets
 
-phe =  read.csv2(data.makepath("shareddata/ADNI/adni1go2.phenotypes.covariates.csv"), na.string="NA",header=T,sep=",",dec = ".")
-bba =  read.csv2(data.makepath("shareddata/ADNI/adni1go2.ba.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
-bp1 =  read.csv2(data.makepath("shareddata/ADNI/adni1go2.p180.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
-ntl =  read.csv2(data.makepath("shareddata/ADNI/adni1.lipids.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
-mkl = read.csv2(data.makepath("shareddata/ADNI/adni1.meikle.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
+phe =  read.csv2(data.makepath("ADNI/adni1go2.phenotypes.covariates.csv"), na.string="NA",header=T,sep=",",dec = ".")
+bba =  read.csv2(data.makepath("ADNI/adni1go2.ba.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
+bp1 =  read.csv2(data.makepath("ADNI/adni1go2.p180.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
+ntl =  read.csv2(data.makepath("ADNI/adni1.lipids.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
+mkl = read.csv2(data.makepath("ADNI/adni1.meikle.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
 
 bba.overlap <- intersect(phe$RID, bba$RID)
 SE.bba <- SummarizedExperiment(assays = t(bba[,3:ncol(bba)]), 
