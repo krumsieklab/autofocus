@@ -1,60 +1,91 @@
-## Testing AutoFocus##
-
-suppressPackageStartupMessages(library(dendextend))
-suppressPackageStartupMessages(library(magrittr))
-suppressPackageStartupMessages(library(parallel))
-suppressPackageStartupMessages(library(foreach))
-suppressPackageStartupMessages(library(cluster))
-suppressPackageStartupMessages(library(SummarizedExperiment))
-suppressPackageStartupMessages(library(glmnet))
-
-# Preprocess QMDiab data
-source(codes.makepath("autofocus/PreprocessQMDiab.R"))
-
-# Preprocess ADNI data
-source(codes.makepath("autofocus/ADNI_data_loading.R"))
+#### Initialize ----
+# zap()
+# load libraries
+library(MetaboTools)
+library(tidyverse)
+library(magrittr)
+library(dplyr)
 source(codes.makepath("autofocus/Backend_Modules.R"))
 source(codes.makepath("autofocus/initialize.R"))
 source(codes.makepath("autofocus/ModuleTesting.R"))
 
-#set adjust_method 
-#wy for westfall young - takes forever
-#any other adjustment method that p.adjust takes
-adjust_method = "holm"
+# Load QMDiab
+load(data.makepath("QMDiab/qmdiab_2019_03_13.rda"))
+source(codes.makepath("autofocus/PreprocessQMDiab.R"))
 
-# set number of cores
-cores = 6
+# Load ADNI
+load(data.makepath("ADNI/ADNI_data_for_Annalise/ADNI_data_for_Annalise.RData"))
+source(codes.makepath("autofocus/ADNI_data_loading.R"))
 
-QD <- initialize(t(assay(all_platforms)), 
+# Load ROSMAP
+load(data.makepath("ROSMAP/processed_data/autofocus/2021-03-04_ROSMAP_514Brains_AC.rds"))
+
+####ADNI####
+
+get_adni_R<- function(){
+
+  adni.data<- t(assay(ADNI_platforms))
+  
+  chemical_classes<- lapply(colnames(adni.data), function(i){names(fset.list)[grep(i,fset.list)[1]]}) %>% unlist()
+  adni.metanno<-data.frame(rowData(ADNI_platforms), chemical_class=chemical_classes)
+  
+  
+  ADNI <- initialize_R(adni.data,
+                       sample.data = colData(ADNI_platforms),
+                       mol.data = adni.metanno)
+  ADNI
+}
+
+test_ADNI <- function(adni_R,score_method="pc",adjust_method="wy",cores=40){
+  find_sig_clusts(adni_R,
+                  "ADAS.Cog13", 
+                  c("Age","Sex","bmi_in_kg_p_m2","Education"),
+                  score_method,
+                  adjust_method,
+                  cores)
+}
+
+
+
+#### QMDIAB ####
+
+get_qd_R<-function(){
+  names(all_platforms)<-rowData(all_platforms)$name
+  QD <- initialize_R(t(assay(all_platforms)), 
                    sample.data = colData(all_platforms),
                    mol.data = rowData(all_platforms))
+  QD
+}
 
-QD_results_lm <- find_sig_clusts(QD, 
-                              "DIAB", c("AGE", "SEX", "BMI"), 
-                              score_method = "lm", 
-                              adjust_method = adjust_method, 
-                              cores = cores)
-
-QD_results_pc <- find_sig_clusts(QD, 
-                                 "DIAB", c("AGE", "SEX", "BMI"), 
-                                 score_method = "pc", 
-                                 adjust_method = adjust_method, 
-                                 cores = cores)
-
-AD <- initialize(t(assay(ADNI_platforms)), 
-                 sample.data = colData(ADNI_platforms),
-                 mol.data = rowData(ADNI_platforms))
-
-AD_results_lm <- find_sig_clusts(AD, 
-                              "ADAS.Cog13", c("Age", "Sex", "Education"), 
-                              score_method = "lm", 
-                              adjust_method = adjust_method,
-                              cores = cores)
+test_QMDiab <- function(qd_R, score_method="pc",adjust_method="wy",cores=40){
+  find_sig_clusts(qd_R, 
+                 "DIAB", 
+                 c("AGE", "SEX", "BMI"), 
+                 score_method, 
+                 adjust_method, 
+                 cores)
+}
 
 
-AD_results_pc <- find_sig_clusts(AD, 
-                              "ADAS.Cog13", c("Age", "Sex", "Education"), 
-                              score_method = "pc", 
-                              adjust_method = adjust_method,
-                              cores = cores)
+
+#### ROSMAP ####
+
+get_rosmap_R<-function(){
+
+  names(AC$D)<-rowData(AC$D)$BIOCHEMICAL
+
+  ROSMAP<- initialize_R(t(assay(AC$D)), 
+                      sample.data = colData(AC$D),
+                      mol.data = rowData(AC$D))
+  ROSMAP
+}
+
+test_ROSMAP<- function(rosmap_R,score_method="pc",adjust_method="wy",cores=40){
+  find_sig_clusts(rosmap_R, 
+                   "cogng_random_slope", 
+                   score_method, 
+                   adjust_method,
+                   cores)
+  }
+
 
