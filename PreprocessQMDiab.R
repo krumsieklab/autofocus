@@ -5,36 +5,14 @@ library(pheatmap)
 library(Hmisc)
 library(RCy3)
 library(igraph)
+library(plyr)
 library("dplyr")
 library("psych")
-library(MetaboTools)
+library(maplet)
 # Commit number 1030613ae4bc88ec4d98a466fe2251b70f60a5e8 10/10/20
 if (!exists('qmdiab')){
-  base::load("~/Box/shareddata/QMDiab/qmdiab_2019_03_13.rda")
+  base::load(data.makepath("QMDiab/qmdiab_2019_03_13.rda"))
 }
-
-repeats <- function(
-  D,
-  i
-){
-  to_return <- c()
-  for (j in (i+1):nrow(assay(D))){
-    if(all(assay(D)[i,] == assay(D)[j,])){
-      to_return <- c(to_return, j)
-    }
-  }
-  to_return
-}
-
-remove_repeats<- function(
-  D,
-  mc.cores
-){
-  reps <- unlist(pbmclapply(1:(nrow(D)-1), function(i) repeats(D, i), mc.cores = mc.cores)) 
-  D <- D[-reps,]
-  D
-}
-
 
 
 preprocess_steps <- function(
@@ -50,11 +28,11 @@ preprocess_steps <- function(
   # change 0s to NAs
   assay(D)[assay(D) == 0] <- NA
   
-  D_alone <-
+  D_alone <- D %>% 
 
-    mt_pre_filtermiss(D,met_max=0.2) %>%
+    mt_pre_filter_missingness(feat_max=0.2) %>%
     
-    mt_pre_filtermiss(sample_max=0.1) %>%
+    mt_pre_filter_missingness(samp_max=0.1) %>%
     
     mt_pre_norm_quot() %>%
     
@@ -62,9 +40,7 @@ preprocess_steps <- function(
     
     mt_pre_trans_scale() %>% 
     
-    mt_pre_outliercorrection() %>% 
-    
-    mt_pre_filtermiss(sample_max=0.1) %>% 
+    mt_pre_outlier_to_na() %>%
     
     mt_pre_impute_knn() 
     
@@ -87,10 +63,11 @@ preprocess_IgA <- function(
   # change 0s to NAs
   assay(D)[assay(D) == 0] <- NA
   
-  D_alone <-
-    mt_pre_filtermiss(D, met_max=0.2) %>%
+  D_alone <- D %>% 
     
-    mt_pre_filtermiss(sample_max=0.1) 
+    mt_pre_filter_missingness(feat_max=0.2) %>%
+    
+    mt_pre_filter_missingness(samp_max=0.1)
   for (prot in IgA_prots){
     indices <- which(startsWith(rowData(D_alone)$name, prot))
     if (length(indices)!= 0){
@@ -167,32 +144,6 @@ find_missing_samples <- function(
 }
 
 
-find_overlap <- function(
-  datasets     # List of datasets in qmdiab
-){
-  samples_list <- c()
-  metabolites_list <- c()
-  datasets_list <- list()
-  #for (i in 1:length(datasets)){
-  combos <- combn(datasets, 5)
-  print(combos)
-  for (i in 1:ncol(combos)){
-    
-    bound <- bind_platforms(as.vector(combos[,i]))
-    bound_no_NA <- bound[ , colSums(is.na(bound)) == 0]
-    
-    samples_list <- c(samples_list, ncol(bound_no_NA))
-    metabolites_list <- c(metabolites_list, nrow(bound_no_NA))
-    datasets_list <- append(datasets_list, list(combos[,i]))
-    print(datasets_list)
-    print (paste(i, " out of ", ncol(combos), " have run"))
-    #}
-  }
-  final <- list(samples_list, metabolites_list, datasets_list)
-  final
-}
-
-
 plotToCytoscape <- function(
   D,
   matrix, # Correlation, p-value, or adjacency matrix
@@ -220,6 +171,23 @@ plotToCytoscape <- function(
   #significant_numeric
 }
 
+bind_SE_with_NA <- function(platforms){
+  
+  full_assay <- lapply(platforms, function(i) data.frame(assay(i))) %>% bind_rows()
+  colnames(full_assay)<-lapply(colnames(full_assay), function(i) strsplit(i, "X")[[1]][2]) %>% unlist
+  full_assay<-full_assay[,order(as.numeric(colnames(full_assay)))]
+  
+  columns_df <- lapply(platforms, function(i) data.frame(colData(i)))
+  full_colData <- Reduce(function(x, y) merge(x, y, by=colnames(columns_df[[1]]), all=T), columns_df)
+  full_colData <- full_colData[order(as.numeric(full_colData$SampleId)),]
+  
+  rows_df <- lapply(platforms, function(i) data.frame(rowData(i)))
+  full_rowData <- Reduce(function(x, y) merge(x, y, by=intersect(colnames(x),colnames(y)), all=T), rows_df)
+  full_rowData <- full_rowData[match(rownames(full_assay), full_rowData$FeatureId),]
+  
+  SummarizedExperiment(assays = full_assay, colData = full_colData, rowData = full_rowData)
+}
+
 process_PM = preprocess_steps(qmdiab$PM)
 process_UM = preprocess_steps(qmdiab$UM)
 process_SM = preprocess_steps(qmdiab$SM)
@@ -235,9 +203,9 @@ process_IgG = preprocess_steps(qmdiab$rawIgG)
 
 
 platform_list <- list(process_PM, process_UM, process_SM, process_HDF, process_CM, process_BM, process_BRAIN, process_SOMA, process_LD, process_IgA, process_GP, process_IgG)
-all_platforms <- bind_SE_no_NA(platform_list)
+all_platforms <- bind_SE_with_NA(platform_list)
 
-rm(platform_list, process_PM, process_UM, process_SM, process_HDF,process_CM, process_BM,process_BRAIN,process_SOMA,process_IgA,process_LD,process_IgG, process_GP)
+rm(platform_list)
 #ks <- lapply(1:nrow(all_platforms), function(x) ks.test(scale(assay(all_platforms)[x,]), pnorm)$p.value)
 #names <- c("PM", "UM", "SM", "HDF", "CM","BM","BRAIN","SOMA","LD", "IgA","GP","IgG")
 # samples available in all omics 
@@ -338,3 +306,15 @@ rm(platform_list, process_PM, process_UM, process_SM, process_HDF,process_CM, pr
 # 
 # 
 # 
+
+# overlaps<-c("ID","BIOCHEMICAL","HMDB","COMP_ID")
+# PM<-c()
+# HDF<-c()
+# for (column in c("ID","BIOCHEMICAL","COMP_IDstr")){
+#   matched<- match(rowData(qmdiab$PM)[[column]], rowData(qmdiab$HDF)[[column]])
+#   PM<-c(PM,which(!is.na(matched)))
+#   HDF<-c(HDF,matched[which(!is.na(matched))])
+# } 
+# 
+# View(unique(cbind(rowData(qmdiab$PM)$BIOCHEMICAL[PM],rowData(qmdiab$HDF)$BIOCHEMICAL[HDF] )))
+
