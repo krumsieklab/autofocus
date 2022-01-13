@@ -13,7 +13,6 @@ library(RhpcBLASctl)
 blas_set_num_threads(1)
 
 
-
 #### Get parent of a cluster ####
 #' get_parent
 #' 
@@ -224,7 +223,6 @@ get_dend_indices <- function(
 #' 
 get_sig_child_density <- function(R, phenotype, confounders){
   sig_kids<-lapply(1:nleaves(R$HCL), function(i) {
-    #cor.test(R$data[,i], R$samples$DIAB)$p.value
     data <- data.frame(pheno=R$samples[[phenotype]], molecule = R$data[,i], R$samples[,confounders])
     reg <- lm(pheno ~ ., data = data)
     summary(reg)$coefficients["molecule", "Pr(>|t|)"]
@@ -233,11 +231,11 @@ get_sig_child_density <- function(R, phenotype, confounders){
   
   sig_kids<-1*(sig_kids<0.05)
   
-  densities <- lapply(1:5134, function(i) {
+  densities <- lapply(1:dim(HCL$merge)[1], function(i) {
     members <-  R$clusts[i][[1]]
     sum(sig_kids[members])/length(members)
   }) %>% unlist()
-  c(densities, sig_kids)
+  densities
 }
 
 #### Get direct edges between disease phenotype and module members ####

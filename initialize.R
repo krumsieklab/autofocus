@@ -1,5 +1,5 @@
 ### internal functions
-source("Backend_Modules.R")
+source(codes.makepath("autofocus/Backend_Modules.R"))
 
 #### Parse Input ####
 #' input
@@ -65,6 +65,7 @@ initialize_R <- function(
   
   # Organize input data
   R <- list(data = scale(data.matrix), samples = sample.data, annos = mol.data)
+  
   # Calculate correlations between biomolecules
   R$C <- stats::cor(data.matrix, use="pairwise.complete.obs")
   
@@ -82,6 +83,7 @@ initialize_R <- function(
   coord_x <-lapply(1:nnodes(R$HCL), function(i) {round(dend_xy[which(R$order==i),1], digits = 10)}) %>% unlist()
   coord_y <- lapply(1:nnodes(R$HCL), function(i){round(dend_xy[which(R$order==i),2],digits= 10)}) %>% unlist()
   
+  # Get the number of full samples in each cluster
   num_samples <- lapply(1:nnodes(R$HCL), function (i) {
     if (i > dim(R$HCL$merge)[1]){
       return(sum(!is.na(R$data[,(i-dim(R$HCL$merge)[1])])))
@@ -92,7 +94,8 @@ initialize_R <- function(
       return(1*(apply(is.na(data),1,sum)==0) %>% sum())
     }
   }) %>% unlist()
-
+  
+  # Build data.frame containing data for each cluster
   R$clust_info <- data.frame(ClusterID=1:nnodes(R$HCL),
                              Parent = parents,
                              Coord_X=coord_x,

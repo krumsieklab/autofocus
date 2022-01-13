@@ -31,7 +31,12 @@ get_node_label <- function(
   if (i > (internal_nodes)) return(R$HCL$labels[(i - internal_nodes)] )
   
   #Internal node case
-  else return(paste("Cluster ID:",R$clust_info$ClusterID[[i]] , "Significant Children Density: ",R$clust_info$densities[[i]]))
+  else return(paste("<br>Cluster ID:",
+                    R$clust_info$ClusterID[[i]] ,
+                    "</br><br>Significant Children Density: ",
+                    R$clust_info$densities[[i]],
+                    "</br><br>Number of Significant Children: ",
+                    sum(R$clust_info$densities[(R$clusts[[i]]+dim(R$HCL$merge)[1])])))
 }
 
 #' get_node_color
@@ -41,9 +46,9 @@ get_node_label <- function(
 #' the color is the red if module is has a higher density than input, black otherwise
 #'
 #' @param R R struct
-#' @param i index of module to be labeled
+#' @param threshold threshold of significant children
 #' 
-#' @return label of node i 
+#' @return color list
 #' 
 get_node_color <- function(
   R, 
@@ -177,6 +182,17 @@ get_disappointment_child <- function(i, R, threshold){
   R$HCL$merge[i,][which(kids_dens == min(kids_dens))]
 }
 
+get_ancestors <- function(R, i, parent_list ){
+  if (i == dim(R$HCL$merge)[1]){
+    return(parent_list)
+  }
+  else{
+    parent <-  which(rowSums(R$HCL$merge==i) == 1)
+    parent_list <- c(parent_list, parent)
+    get_ancestors(R, parent, parent_list)
+  }
+}
+
 #' plot_dend
 #' 
 #' Create dendrogram view of data
@@ -207,13 +223,13 @@ plot_dend<-function(
   # Add node markers
   add_trace(type='scatter',
             mode = "markers",
-            text = ~label,
             marker = list(color=~color)) %>% 
   add_trace(x = R$clust_info$Coord_X[colors],
             y = R$clust_info$Coord_Y[colors],
             type='scatter',
             mode = "markers",
             text = R$clust_info$label[colors],
+            hovertemplate = paste('<b>%{text}</b>'),
             marker = list(color=R$clust_info$color[colors]))
 }
 
@@ -286,6 +302,56 @@ get_anno_data <- function(
   
 }
 
+get_anno_data_test<- function(R,i){
+  mat <- R$annos[R$clusts[[i]],]
+  links <-
+    data.frame(mat) %>%
+    mutate(row = row_number()) %>%
+    mutate(origin = .[[1]]) %>%
+    gather("column", "source", -row, -origin) %>%
+    mutate(column = match(column, names(df))) %>%
+    arrange(row, column) %>%
+    group_by(row) %>%
+    mutate(target = lead(source)) %>%
+    ungroup() %>%
+    filter(!is.na(target)) %>%
+    select(source, target, origin) %>%
+    group_by(source, target, origin) %>%
+    summarise(count = n()) %>%
+    ungroup()
+  
+  nodes <- data.frame(name = unique(c(links$source, links$target)))
+  links$source <- match(links$source, nodes$name) - 1
+  links$target <- match(links$target, nodes$name) - 1
+  sn <- sankeyNetwork(Links = links, Nodes = nodes, Source = 'source',
+                      Target = 'target', Value = 'count', NodeID = 'name')
+  
+  # add origin back into the links data because sankeyNetwork strips it out
+  sn$x$links$origin <- links$origin
+  
+  
+  # add onRender JavaScript to set the click behavior
+  htmlwidgets::onRender(
+    sn,
+    '
+  function(el, x) {
+    var nodes = d3.selectAll(".node");
+    var links = d3.selectAll(".link");
+    nodes.on("mousedown.drag", null); // remove the drag because it conflicts
+    nodes.on("click", clicked);
+    function clicked(d, i) {
+      links
+        .style("stroke-opacity", function(d1) {
+            return d1.origin == d.name ? 0.5 : 0.2;
+          });
+    }
+  }
+  '
+  )
+  sn
+}
+
+
 #### Format annotation names ####
 #' add_line_format
 #' 
@@ -355,8 +421,7 @@ cluster_net <- function(
 
 get_drivers<- function(R, i){
   g <- R$graphs[[i]]
-  drivers <- V(g)$name[V(g)$Driver]
-  which(colnames(R$data) %in% drivers)
+  V(g)$name[V(g)$Driver]
 }
 
 
