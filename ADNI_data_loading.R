@@ -3,11 +3,11 @@
 library(dplyr)
 # reading data sets
 
-phe =  read.csv2(data.makepath("ADNI/adni1go2.phenotypes.covariates.csv"), na.string="NA",header=T,sep=",",dec = ".")
-bba =  read.csv2(data.makepath("ADNI/adni1go2.ba.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
-bp1 =  read.csv2(data.makepath("ADNI/adni1go2.p180.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
-ntl =  read.csv2(data.makepath("ADNI/adni1.lipids.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
-mkl = read.csv2(data.makepath("ADNI/adni1.meikle.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
+phe =  read.csv2(data.makepath("shareddata/ADNI/ADNI_datasets_from_Matthias/adni1go2.phenotypes.covariates.csv"), na.string="NA",header=T,sep=",",dec = ".")
+bba =  read.csv2(data.makepath("shareddata/ADNI/ADNI_datasets_from_Matthias/adni1go2.ba.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
+bp1 =  read.csv2(data.makepath("shareddata/ADNI/ADNI_datasets_from_Matthias/adni1go2.p180.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
+ntl =  read.csv2(data.makepath("shareddata/ADNI/ADNI_datasets_from_Matthias/adni1.lipids.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
+mkl = read.csv2(data.makepath("shareddata/ADNI/ADNI_datasets_from_Matthias/adni1.meikle.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
 
 
 bind_SE_no_NA <- function(
@@ -62,4 +62,4 @@ colnames(SE.mkl)<-mkl[,1]
 rowData(SE.mkl)$name <- colnames(mkl)[2:ncol(mkl)]
 rowData(SE.mkl)$platform <- rep('mkl', times = (ncol(mkl)-1))
 
-ADNI_platforms <- bind_SE_no_NA(list(SE.bba, SE.bp1, SE.ntl, SE.mkl))
+ADNI_platforms <- bind_SE_no_NA(list(SE.bba, SE.bp1, SE.ntl, SE.mkl))%>% mt_pre_confounding_correction(formula = ~Sex+Age+bmi_in_kg_p_m2+Education)
