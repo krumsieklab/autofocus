@@ -3,11 +3,12 @@
 library(dplyr)
 # reading data sets
 
-phe =  read.csv2(data.makepath("shareddata/ADNI/ADNI_datasets_from_Matthias/adni1go2.phenotypes.covariates.csv"), na.string="NA",header=T,sep=",",dec = ".")
-bba =  read.csv2(data.makepath("shareddata/ADNI/ADNI_datasets_from_Matthias/adni1go2.ba.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
-bp1 =  read.csv2(data.makepath("shareddata/ADNI/ADNI_datasets_from_Matthias/adni1go2.p180.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
-ntl =  read.csv2(data.makepath("shareddata/ADNI/ADNI_datasets_from_Matthias/adni1.lipids.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
-mkl = read.csv2(data.makepath("shareddata/ADNI/ADNI_datasets_from_Matthias/adni1.meikle.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
+phe =  read.csv2(data.makepath("/ADNI/ADNI_datasets_from_Matthias/adni1go2.phenotypes.covariates.csv"), na.string="NA",header=T,sep=",",dec = ".")
+bba =  read.csv2(data.makepath("/ADNI/ADNI_datasets_from_Matthias/adni1go2.ba.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
+bp1 =  read.csv2(data.makepath("/ADNI/ADNI_datasets_from_Matthias/adni1go2.p180.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
+ntl =  read.csv2(data.makepath("/ADNI/ADNI_datasets_from_Matthias/adni1.lipids.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
+mkl = read.csv2(data.makepath("/ADNI/ADNI_datasets_from_Matthias/adni1.meikle.medadjusted.csv"), na.string="NA",header=T,sep=",",dec = ".")
+load(data.makepath("/ADNI/ADNI_data_for_Annalise/ADNI_data_for_Annalise.RData"))
 
 
 bind_SE_no_NA <- function(
@@ -62,4 +63,6 @@ colnames(SE.mkl)<-mkl[,1]
 rowData(SE.mkl)$name <- colnames(mkl)[2:ncol(mkl)]
 rowData(SE.mkl)$platform <- rep('mkl', times = (ncol(mkl)-1))
 
-ADNI_platforms <- bind_SE_no_NA(list(SE.bba, SE.bp1, SE.ntl, SE.mkl))%>% mt_pre_confounding_correction(formula = ~Sex+Age+bmi_in_kg_p_m2+Education)
+ADNI_platforms <- bind_SE_with_NA(list(SE.bba, SE.bp1, SE.ntl, SE.mkl), sample_id="RID",mol_id="name")
+rowData(ADNI_platforms)$chemical_classes<- lapply(rownames(ADNI_platforms), function(i){names(fset.list)[grep(i,fset.list)[1]]}) %>% unlist()
+

@@ -302,12 +302,16 @@ get_anno_data <- function(
   
 }
 
-get_anno_data_test<- function(R,i){
+get_anno_data_sankey<- function(R,i){
   mat <- R$annos[R$clusts[[i]],]
+  df_mat<- mat %>% data.frame
+  for(n in 1:ncol(df_mat)) {                                   # Replace NA in all columns
+    df_mat[ , n][is.na(df_mat[ , n])] <- paste0("Missing ",colnames(df_mat)[n])
+  }
   links <-
-    data.frame(mat) %>%
+    df_mat %>%
+    unite(origin, colnames(df_mat),remove=F) %>%
     mutate(row = row_number()) %>%
-    mutate(origin = .[[1]]) %>%
     gather("column", "source", -row, -origin) %>%
     mutate(column = match(column, names(df))) %>%
     arrange(row, column) %>%
@@ -324,33 +328,42 @@ get_anno_data_test<- function(R,i){
   links$source <- match(links$source, nodes$name) - 1
   links$target <- match(links$target, nodes$name) - 1
   sn <- sankeyNetwork(Links = links, Nodes = nodes, Source = 'source',
-                      Target = 'target', Value = 'count', NodeID = 'name')
+                      Target = 'target', Value = 'count', NodeID = 'name', fontSize=10)
   
   # add origin back into the links data because sankeyNetwork strips it out
   sn$x$links$origin <- links$origin
   
   
   # add onRender JavaScript to set the click behavior
-  htmlwidgets::onRender(
+  sn<-htmlwidgets::onRender(
     sn,
-    '
-  function(el, x) {
-    var nodes = d3.selectAll(".node");
-    var links = d3.selectAll(".link");
-    nodes.on("mousedown.drag", null); // remove the drag because it conflicts
-    nodes.on("click", clicked);
-    function clicked(d, i) {
-      links
-        .style("stroke-opacity", function(d1) {
-            return d1.origin == d.name ? 0.5 : 0.2;
-          });
-    }
-  }
-  '
-  )
+    paste0('
+      function(el, x) {
+        var nodes = d3.selectAll(".node");
+        var links = d3.selectAll(".link");
+        var cols_x = this.sankey.nodes().map(d => d.x).filter((v, i, a) => a.indexOf(v) === i).sort(function(a, b){return a - b});
+        var labels = ["',paste(unlist(colnames(df_mat)), collapse='","'),'"];
+        cols_x.forEach((d, i) => {
+          d3.select(el).select("svg")
+            .append("text")
+            .attr("x", d)
+            .attr("y", 12)
+            .text(labels[i]);
+        })
+        nodes.on("mousedown.drag", null); // remove the drag because it conflicts
+        nodes.on("click", clicked);
+        function clicked(d, i) {
+          links
+            .style("stroke-opacity", function(d1) {
+                var str = d1.origin
+                return str.includes(d.name) ? 0.5 : 0.2;
+              });
+        }
+      }
+      '
+  ))
   sn
 }
-
 
 #### Format annotation names ####
 #' add_line_format

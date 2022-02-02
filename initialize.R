@@ -6,9 +6,9 @@ source(codes.makepath("autofocus/Backend_Modules.R"))
 #' 
 #' Parses input data
 #'
-#' @param mol_sheets List of excel file names containing molecular data
+#' @param mol_files List of excel file names containing molecular data
 #' @param sample_sheet Excel file name containing sample data
-#' @param id_col string, name of column in sample_sheet that represents identifiers of samples, used in all mol_sheets as well
+#' @param sample_id string, name of column in sample_sheet that represents identifiers of samples, used in all mol_sheets as well
 #' @param phenotype string, name of column containing phenotype to be tested
 #' @param confounders vector of strings, names of columns in sample_sheet that contain confounders
 #' @param cores Number of cores to be used in algorithm
@@ -16,10 +16,10 @@ source(codes.makepath("autofocus/Backend_Modules.R"))
 #' @return R struct with the data matrix, correlation matrix, 
 #' sample and molecular annotations, hierarchical structure, cluster membership
 #' node order within the hierarchical structure and a color vector for the platforms
-input <- function(
-  mol_sheets,
+input_xls <- function(
+  mol_files,
   sample_sheet,
-  id_col,
+  sample_id,
   phenotype,
   confounders,
   cores
@@ -104,9 +104,44 @@ initialize_R <- function(
   
   R$clust_info$densities <- get_sig_child_density(R, phenotype, confounders)
   
-  R$clust_info$mgm_capable <- (num_samples >= R$clust_info$Size) & (R$clust_info$densities > 0.5) & (R$clust_info$Size>1)
+  R$clust_info$mgm_capable <- (num_samples >= R$clust_info$Size) & (R$clust_info$densities >= 0.5) & (R$clust_info$Size>1)
   R$graphs <- lapply(1:nnodes(R$HCL), function(i) get_edges_linear(i,R, phenotype, confounders))
   to_remove <- c("data", "dist","C","order")
   R[!(names(R) %in% to_remove)] 
+}
+
+#### Get SummarizedExperiment with all platforms ####
+#' bind_SE_with_NA
+#' 
+#' Binds the SummarizedExperiments of individual
+#' platforms into a single SummarizedExperiment where
+#' all samples are kept and NAs are (purposefully)
+#' produced where a sample doesn tn have an analyte measurement
+#' Note that the sample names must be in the same format and
+#' under the same column name for all platforms!
+#'
+#' @param platforms list of individual platform SEs
+#' @param sample_id Column name of the sample identifier 
+#' 
+#' @return A SummarizedExperiment object with all platforms data
+#'
+
+bind_SE_with_NA <- function(platforms, sample_id){
+  
+  # Set the column names of each platform to the universal sample identifier
+  platforms <- lapply(platforms, function(i) colnames(i)<-colData(i)[[sample_id]])
+  
+  # Bind the assay data, order
+  full_assay <- lapply(platforms, function(i) data.frame(assay(i))) %>% bind_rows()
+  full_assay<-full_assay[,order(as.numeric(colnames(full_assay)))]
+  
+  columns_df <- lapply(platforms, function(i) data.frame(colData(i)))
+  full_colData <- Reduce(function(x, y) merge(x, y, by=colnames(columns_df[[1]]), all=T), columns_df)
+  full_colData[[sample_id]] <- sapply(full_colData[[sample_id]], function(x) gsub("-", ".", x) )
+  full_colData <- full_colData[order(as.numeric(full_colData[[sample_id]])),]
+  
+  full_rowData <- lapply(platforms, function(i) data.frame(rowData(i))) %>% bind_rows()
+  
+  SummarizedExperiment(assays = full_assay, colData = full_colData, rowData = full_rowData)
 }
 

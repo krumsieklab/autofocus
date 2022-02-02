@@ -171,20 +171,19 @@ plotToCytoscape <- function(
   #significant_numeric
 }
 
-bind_SE_with_NA <- function(platforms){
+bind_SE_with_NA <- function(platforms, sample_id){
   
   full_assay <- lapply(platforms, function(i) data.frame(assay(i))) %>% bind_rows()
-  colnames(full_assay)<-lapply(colnames(full_assay), function(i) strsplit(i, "X")[[1]][2]) %>% unlist
+  #colnames(full_assay)<-lapply(colnames(full_assay), function(i) strsplit(i, "X")[[1]][2]) %>% unlist
   full_assay<-full_assay[,order(as.numeric(colnames(full_assay)))]
-  
+
   columns_df <- lapply(platforms, function(i) data.frame(colData(i)))
   full_colData <- Reduce(function(x, y) merge(x, y, by=colnames(columns_df[[1]]), all=T), columns_df)
-  full_colData <- full_colData[order(as.numeric(full_colData$SampleId)),]
-  
-  rows_df <- lapply(platforms, function(i) data.frame(rowData(i)))
-  full_rowData <- Reduce(function(x, y) merge(x, y, by=intersect(colnames(x),colnames(y)), all=T), rows_df)
-  full_rowData <- full_rowData[match(rownames(full_assay), full_rowData$FeatureId),]
-  
+  full_colData[[sample_id]] <- sapply(full_colData[[sample_id]], function(x) gsub("-", ".", x) )
+  full_colData <- full_colData[order(as.numeric(full_colData[[sample_id]])),]
+
+  full_rowData <- lapply(platforms, function(i) data.frame(rowData(i))) %>% bind_rows()
+
   SummarizedExperiment(assays = full_assay, colData = full_colData, rowData = full_rowData)
 }
 
@@ -203,7 +202,7 @@ process_IgG = preprocess_steps(qmdiab$rawIgG)
 
 
 platform_list <- list(process_PM, process_UM, process_SM, process_HDF, process_CM, process_BM, process_BRAIN, process_SOMA, process_LD, process_IgA, process_GP, process_IgG)
-all_platforms <- bind_SE_with_NA(platform_list)
+all_platforms <- bind_SE_with_NA(platform_list, 'SampleId','FeatureId')
 
 rm(platform_list)
 #ks <- lapply(1:nrow(all_platforms), function(x) ks.test(scale(assay(all_platforms)[x,]), pnorm)$p.value)

@@ -9,6 +9,9 @@ suppressPackageStartupMessages(library(dendextend))
 suppressPackageStartupMessages(library(shinydashboard))
 suppressPackageStartupMessages(library(DT))
 suppressPackageStartupMessages(library(shinyalert))
+suppressPackageStartupMessages(library(tidyr))
+suppressPackageStartupMessages(library(dplyr))
+
 
 #args = commandArgs(trailingOnly = T)
 #load(file=args[1])
@@ -99,44 +102,57 @@ server <- function(input, output) {
   
   ### Annotation section ###
   output$barplots <- renderSankeyNetwork({
-      mat <- R$annos[R$clusts[[selected_node$n]],]
-      df_mat<- mat %>% data.frame
-      for(i in 1:ncol(df_mat)) {                                   # Replace NA in all columns
-        df_mat[ , i][is.na(df_mat[ , i])] <- paste0("Missing ",colnames(df_mat)[i])
-      }
-      links <-
-        df_mat %>%
-        unite(origin, colnames(df_mat),remove=F) %>%
-        mutate(row = row_number()) %>%
-        gather("column", "source", -row, -origin) %>%
-        mutate(column = match(column, names(df))) %>%
-        arrange(row, column) %>%
-        group_by(row) %>%
-        mutate(target = lead(source)) %>%
-        ungroup() %>%
-        filter(!is.na(target)) %>%
-        select(source, target, origin) %>%
-        group_by(source, target, origin) %>%
-        summarise(count = n()) %>%
-        ungroup()
-      
-      nodes <- data.frame(name = unique(c(links$source, links$target)))
-      links$source <- match(links$source, nodes$name) - 1
-      links$target <- match(links$target, nodes$name) - 1
-      sn <- sankeyNetwork(Links = links, Nodes = nodes, Source = 'source',
-                          Target = 'target', Value = 'count', NodeID = 'name', fontSize=10)
-      
-      # add origin back into the links data because sankeyNetwork strips it out
-      sn$x$links$origin <- links$origin
-      
-      
-      # add onRender JavaScript to set the click behavior
-      sn<-htmlwidgets::onRender(
-        sn,
-        '
+    mat <- R$annos[R$clusts[[selected_node$n]],]
+    print(dim(mat))
+    if(dim(mat)[2]==1){
+      mat <- cbind(mat, mat)
+    }
+    df_mat<- mat %>% data.frame
+    for(n in 1:ncol(df_mat)) {                                   # Replace NA in all columns
+      df_mat[ , n][is.na(df_mat[ , n])] <- paste0("Missing ",colnames(df_mat)[n])
+    }
+    links <-
+      df_mat %>%
+      unite(origin, colnames(df_mat),remove=F) %>%
+      mutate(row = row_number()) %>%
+      gather("column", "source", -row, -origin) %>%
+      mutate(column = match(column, names(df))) %>%
+      arrange(row, column) %>%
+      group_by(row) %>%
+      mutate(target = lead(source)) %>%
+      ungroup() %>%
+      filter(!is.na(target)) %>%
+      select(source, target, origin) %>%
+      group_by(source, target, origin) %>%
+      summarise(count = n()) %>%
+      ungroup()
+    
+    nodes <- data.frame(name = unique(c(links$source, links$target)))
+    links$source <- match(links$source, nodes$name) - 1
+    links$target <- match(links$target, nodes$name) - 1
+    sn <- sankeyNetwork(Links = links, Nodes = nodes, Source = 'source',
+                        Target = 'target', Value = 'count', NodeID = 'name', fontSize=10)
+    
+    # add origin back into the links data because sankeyNetwork strips it out
+    sn$x$links$origin <- links$origin
+    
+    
+    # add onRender JavaScript to set the click behavior
+    sn<-htmlwidgets::onRender(
+      sn,
+      paste0('
       function(el, x) {
         var nodes = d3.selectAll(".node");
         var links = d3.selectAll(".link");
+        var cols_x = this.sankey.nodes().map(d => d.x).filter((v, i, a) => a.indexOf(v) === i).sort(function(a, b){return a - b});
+        var labels = ["',paste(unlist(colnames(df_mat)), collapse='","'),'"];
+        cols_x.forEach((d, i) => {
+          d3.select(el).select("svg")
+            .append("text")
+            .attr("x", d)
+            .attr("y", 12)
+            .text(labels[i]);
+        })
         nodes.on("mousedown.drag", null); // remove the drag because it conflicts
         nodes.on("click", clicked);
         function clicked(d, i) {
@@ -148,8 +164,9 @@ server <- function(input, output) {
         }
       }
       '
-      )
-      sn
+      ))
+    sn
+    #get_anno_data_sankey(R, selected_node$n)
   })
   
   ### Network/Driver section ###

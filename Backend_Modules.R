@@ -231,11 +231,11 @@ get_sig_child_density <- function(R, phenotype, confounders){
   
   sig_kids<-1*(sig_kids<0.05)
   
-  densities <- lapply(1:dim(HCL$merge)[1], function(i) {
+  densities <- lapply(1:dim(R$HCL$merge)[1], function(i) {
     members <-  R$clusts[i][[1]]
     sum(sig_kids[members])/length(members)
   }) %>% unlist()
-  densities
+  c(densities, sig_kids)
 }
 
 #### Get direct edges between disease phenotype and module members ####
@@ -265,29 +265,42 @@ get_edges_linear <- function(i, R, phenotype, confounders){
     # Either categorical ("c") or gaussian ("g")
     # If categorical, get number of categories
     
-    phenotype_type <- get_variable_type(R$samples[[phenotype]])
-    phenotype_cat <- get_num_categories(R$samples[[phenotype]])
+    #phenotype_type <- get_variable_type(R$samples[[phenotype]])
+    #phenotype_cat <- get_num_categories(R$samples[[phenotype]])
     
     confounder_data <- R$samples[,confounders]
-    confounder_types <- apply(confounder_data, 2, get_variable_type) %>% as.vector()
-    confounder_cat <- apply(confounder_data, 2, get_num_categories) %>% as.vector()
+    #confounder_types <- apply(confounder_data, 2, get_variable_type) %>% as.vector()
+    #confounder_cat <- apply(confounder_data, 2, get_num_categories) %>% as.vector()
     
     #Combine all data with confounders
     full_data<-data.frame(R$data[,members], confounder_data)
     names <- c(phenotype, names(full_data))
     full_data <-as.matrix(as.data.frame(lapply(full_data, as.numeric)))
-    print(dim(full_data))
     # Remove samples with NAs
     no_nas = apply(is.na(full_data),1,sum) == 0
     data_no_na <- cbind(R$samples[[phenotype]][no_nas], full_data[no_nas,])
+    colnames(data_no_na)<- names
     
+    types <- apply(data_no_na, 2, get_variable_type) %>% as.vector()
+    levels <- apply(data_no_na, 2, get_num_categories) %>% as.vector()
+    
+    if('c' %in% types) {
+      ind_cat <- which(types == 'c')
+      to_remove<-c()
+      for(i in ind_cat) {
+        l_frqu <- table(data_no_na[,i])
+        cats_to_remove <- names(l_frqu)[which(l_frqu<=1)]
+        if(length(cats_to_remove)>0){
+          levels[i]<-levels[i] - length(cats_to_remove)
+          to_remove<-c(to_remove, which(data_no_na[,i]%in% cats_to_remove))
+          }
+        } # this does not catch the case where one category is not present at all; but this is catched by comparing specified levels and real levels
+    }
+    if(length(to_remove)>0){
+      data_no_na <- data_no_na[-to_remove,]
+    }
     # Find direct connections with phenotype in mgm
-    fit_mgm <- mgm(data_no_na, type=c(phenotype_type,
-                                      rep("g", length(members)),
-                                      confounder_types), 
-                   level=c(phenotype_cat,
-                           rep(1, length(members)),
-                           confounder_cat))
+    fit_mgm <- mgm(data_no_na, type=types, level=levels)
     adj_mat <- 1* (fit_mgm$pairwise$wadj!=0)
     
     # Create graph
