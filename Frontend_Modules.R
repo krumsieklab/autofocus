@@ -6,6 +6,7 @@ suppressPackageStartupMessages(library(igraph))
 suppressPackageStartupMessages(library(dendextend))
 suppressPackageStartupMessages(library(shinydashboard))
 suppressPackageStartupMessages(library(DT))
+suppressPackageStartupMessages(library(networkD3))
 
 #### Make Dendrogram ####
 
@@ -22,8 +23,8 @@ suppressPackageStartupMessages(library(DT))
 #' @return label of node i 
 #' 
 get_node_label <- function(
-  R, 
-  i
+    R, 
+    i
 ){
   internal_nodes <- dim(R$HCL$merge)[1]
   
@@ -51,8 +52,8 @@ get_node_label <- function(
 #' @return color list
 #' 
 get_node_color <- function(
-  R, 
-  threshold
+    R, 
+    threshold
 ){
   hc <- R$HCL
   color_list <- rep("black", times = dim(R$clust_info)[1])
@@ -65,6 +66,16 @@ get_node_color <- function(
   color_list
 }
 
+#' peak_finder_wrapper
+#' 
+#' Wrapper for identify_peaks function
+#' 
+#'
+#' @param R R struct
+#' @param threshold threshold of significant children
+#' 
+#' @return color list
+#' 
 peak_finder_wrapper<-function (R, threshold){
   hc <- R$HCL
   potential_peaks <- identify_peaks(R, dim(hc$merge)[1], threshold, c())
@@ -73,7 +84,7 @@ peak_finder_wrapper<-function (R, threshold){
   piggy_backers <- c()
   while(length(potential_peaks)!=0){
     new_potential_peaks <- c()
-    for (i in potential_peaks){#, function(i){
+    for (i in potential_peaks){
       new_potential_peaks <- c(new_potential_peaks,identify_peaks(R, get_disappointment_child(i, R, threshold), threshold, c()))
     }
     new_filtered_peaks <- filter_peaks(R, new_potential_peaks, threshold)
@@ -104,10 +115,10 @@ peak_finder_wrapper<-function (R, threshold){
 #' 
 
 identify_peaks <- function(
-  R,
-  i,
-  threshold,
-  indices
+    R,
+    i,
+    threshold,
+    indices
 ){
   # Leaf Case
   if (i < 0) return(indices)
@@ -136,9 +147,9 @@ identify_peaks <- function(
 #' 
 
 filter_peaks <- function(
-  R,
-  peak_list,
-  threshold
+    R,
+    peak_list,
+    threshold
 ){
   lapply(peak_list, function(i){
     kids <- R$HCL$merge[i,] %>% 
@@ -161,7 +172,7 @@ filter_peaks <- function(
       }
       
       length_question <- if (questionable_kid > dim(R$HCL$merge)[1]) 1 else R$clusts[[questionable_kid]] %>% length()
-
+      
       new_thresh <- num_sig/ (length_pride + length_question)
       
       if (new_thresh < threshold){
@@ -175,12 +186,34 @@ filter_peaks <- function(
   }) %>% unlist()
 }
 
+#' get_disappointment_child
+#' 
+#' Determines which child of a node does not contribute
+#' to that node's significance density
+#'
+#' @param i Index of node whose children need to be checked
+#' @param R R struct
+#' @param threshold threshold of significant children
+#' 
+#' @return The node ID of the child with the lesser density
+#' 
 get_disappointment_child <- function(i, R, threshold){
   kids <- R$HCL$merge[i,] %>% 
     lapply(function(i) if (i < 0) return(abs(i)+dim(R$HCL$merge)[1]) else return(i)) %>% unlist()
   kids_dens <-  R$clust_info$densities[kids]
   R$HCL$merge[i,][which(kids_dens == min(kids_dens))]
 }
+
+#' get_ancestors
+#' 
+#' Get a list of all internal nodes that are ancestors of input node
+#'
+#' @param R R struct
+#' @param i node id of cluster in question
+#' @param parent_list list that is iteratively filled with ancestors 
+#' 
+#' @return list of cluster ids of all ancestors of input node
+#' 
 
 get_ancestors <- function(R, i, parent_list ){
   if (i == dim(R$HCL$merge)[1]){
@@ -205,165 +238,34 @@ get_ancestors <- function(R, i, parent_list ){
 
 
 plot_dend<-function(
-  R,
-  sig_threshold
+    R,
+    sig_threshold
 ){
   R$clust_info$label <-mapply(function(i) get_node_label(R, i), 1:nnodes(R$HCL))
   R$clust_info$color <- peak_finder_wrapper(R, sig_threshold)
   colors <- which(R$clust_info$color !="black")
   # Start plotly
   R$clust_info %>% plot_ly(x = ~Coord_X,
-          y = ~Coord_Y, source="A") %>% 
-  # Add edges between nodes
-   add_segments(
-    x=R$dend_data$segments$x, 
-    xend=R$dend_data$segments$xend, 
-    y=R$dend_data$segments$y, 
-    yend=R$dend_data$segments$yend)%>%
-  # Add node markers
-  add_trace(type='scatter',
-            mode = "markers",
-            marker = list(color=~color)) %>% 
-  add_trace(x = R$clust_info$Coord_X[colors],
-            y = R$clust_info$Coord_Y[colors],
-            type='scatter',
-            mode = "markers",
-            text = R$clust_info$label[colors],
-            hovertemplate = paste('<b>%{text}</b>'),
-            marker = list(color=R$clust_info$color[colors]))
+                           y = ~Coord_Y, source="A") %>% 
+    # Add edges between nodes
+    add_segments(
+      x=R$dend_data$segments$x, 
+      xend=R$dend_data$segments$xend, 
+      y=R$dend_data$segments$y, 
+      yend=R$dend_data$segments$yend)%>%
+    # Add node markers
+    add_trace(type='scatter',
+              mode = "markers",
+              marker = list(color=~color)) %>% 
+    add_trace(x = R$clust_info$Coord_X[colors],
+              y = R$clust_info$Coord_Y[colors],
+              type='scatter',
+              mode = "markers",
+              text = R$clust_info$label[colors],
+              hovertemplate = paste('<b>%{text}</b>'),
+              marker = list(color=R$clust_info$color[colors]))
 }
 
-
-### Make annotation view ###
-
-#' get_anno_data
-#' 
-#' Gets the annotation data of nodes in a module
-#' and structures it for a sunburst plot
-#'
-#' @param R R struct
-#' @param i index of module we are annotating
-#' 
-#' @return dataframe with labels, parents, and values for sunburst plot
-#' 
-get_anno_data <- function(
-  R,
-  i
-){
-  # Get annotation matrix for selected cluster
-  mat <- R$annos[R$clusts[[i]],]
-  
-  lapply(1:length(colnames(mat)),function(n){
-    if (!all(is.na(mat[,n]))){
-      missing_vals<-sum(is.na(mat[,n]))
-      freqs<- data.frame(table(mat[,n]))
-      
-      # Show 8 most frequent annotations
-      if (nrow(freqs)>8)
-      {
-        freqs<-freqs[order(-freqs$Freq)[1:8],]
-      }
-      
-      names(freqs) <- c(colnames(mat)[n], "count")
-      
-      # Make bar chart for each annotation
-       ggplotly(ggplot(freqs, aes(x=freqs[,1],y=count,fill =freqs[,1]))+
-        geom_bar(stat="identity")+
-        coord_flip() +
-        theme(panel.background = element_blank(), panel.grid.major=element_blank(), legend.position="none")+
-        geom_text(aes(x = freqs[,1], y = count, label = count))+
-        scale_x_discrete(labels=add_line_format(freqs[,1])), source="C") %>% 
-         add_annotations(
-          text =colnames(mat)[n],
-          x = 0,
-          y = 1,
-          yref = "paper",
-          xref = "paper",
-          xanchor = "left",
-          yanchor = "top",
-          yshift = 30,
-          showarrow = FALSE,
-          font = list(size = 15)
-        ) %>% 
-         add_annotations(
-           text =paste("Nodes with no annotation: ",missing_vals),
-           x = 0,
-           y = 1,
-           yref = "paper",
-           xref = "paper",
-           xanchor = "left",
-           yanchor = "top",
-           yshift = 10,
-           showarrow = FALSE,
-           font = list(size = 12)
-         )
-    }
-  })
-  
-}
-
-get_anno_data_sankey<- function(R,i){
-  mat <- R$annos[R$clusts[[i]],]
-  df_mat<- mat %>% data.frame
-  for(n in 1:ncol(df_mat)) {                                   # Replace NA in all columns
-    df_mat[ , n][is.na(df_mat[ , n])] <- paste0("Missing ",colnames(df_mat)[n])
-  }
-  links <-
-    df_mat %>%
-    unite(origin, colnames(df_mat),remove=F) %>%
-    mutate(row = row_number()) %>%
-    gather("column", "source", -row, -origin) %>%
-    mutate(column = match(column, names(df))) %>%
-    arrange(row, column) %>%
-    group_by(row) %>%
-    mutate(target = lead(source)) %>%
-    ungroup() %>%
-    filter(!is.na(target)) %>%
-    select(source, target, origin) %>%
-    group_by(source, target, origin) %>%
-    summarise(count = n()) %>%
-    ungroup()
-  
-  nodes <- data.frame(name = unique(c(links$source, links$target)))
-  links$source <- match(links$source, nodes$name) - 1
-  links$target <- match(links$target, nodes$name) - 1
-  sn <- sankeyNetwork(Links = links, Nodes = nodes, Source = 'source',
-                      Target = 'target', Value = 'count', NodeID = 'name', fontSize=10)
-  
-  # add origin back into the links data because sankeyNetwork strips it out
-  sn$x$links$origin <- links$origin
-  
-  
-  # add onRender JavaScript to set the click behavior
-  sn<-htmlwidgets::onRender(
-    sn,
-    paste0('
-      function(el, x) {
-        var nodes = d3.selectAll(".node");
-        var links = d3.selectAll(".link");
-        var cols_x = this.sankey.nodes().map(d => d.x).filter((v, i, a) => a.indexOf(v) === i).sort(function(a, b){return a - b});
-        var labels = ["',paste(unlist(colnames(df_mat)), collapse='","'),'"];
-        cols_x.forEach((d, i) => {
-          d3.select(el).select("svg")
-            .append("text")
-            .attr("x", d)
-            .attr("y", 12)
-            .text(labels[i]);
-        })
-        nodes.on("mousedown.drag", null); // remove the drag because it conflicts
-        nodes.on("click", clicked);
-        function clicked(d, i) {
-          links
-            .style("stroke-opacity", function(d1) {
-                var str = d1.origin
-                return str.includes(d.name) ? 0.5 : 0.2;
-              });
-        }
-      }
-      '
-  ))
-  sn
-}
 
 #### Format annotation names ####
 #' add_line_format
@@ -379,59 +281,15 @@ add_line_format <- function(names){
 }
 
 
-### OLD CODE ###
-#### Make network view ####
-
-#' cluster_net
+#' get_drivers
 #' 
-#' Create network view of module using minimum-spanning tree method
+#' Gets the names of the drivers of an mgm
 #'
 #' @param R R struct
-#' @param i index of parent of module to make network view
+#' @param i cluster index
 #' 
-#' @return network which is a plotly network of the module
+#' @return names of drivers ofthat cluster's mgm
 #' 
-
-
-cluster_net <- function(
-  R,
-  i
-) {
-  members <- R$clusts[[i]]
-  names <- R$annos$name[members]
-  platforms <- R$annos$platform[members]
-
-  G<- R$graphs[[i]]
-  vs <- V(G)
-  #vs$platform <- platforms
-  es <- as.data.frame(get.edgelist(G))
-
-  L <- layout_as_star(G, center = V(G)[1])
-  edge_dat <- data.frame(x = L[,1][es$V1],
-                         xend = L[,1][es$V2],
-                         y = L[,2][es$V1],
-                         yend = L[,2][es$V2])
-  
-  V(G)$line <- V(G)$color
-  V(G)$line[V(G)$Driver]<- "yellow"
-  network <- plot_ly(x = ~L[,1], y = ~L[,2], source="B") %>%
-
-    add_segments(data = edge_dat,
-                 x = ~x, xend = ~xend, y = ~y, yend = ~yend,
-                 mode='lines',
-                 color = I("black"),
-                 size = I(1),
-                 alpha = 0.5) %>%
-
-    add_trace(type = "scatter",
-              mode = "markers",
-              text = V(G)$name,
-              hoverinfo = "text",
-              marker = list(color = V(G)$color, size = 40, line = list(color =V(G)$line, width=9)))
-
-  network
-}
-
 get_drivers<- function(R, i){
   g <- R$graphs[[i]]
   V(g)$name[V(g)$Driver]
@@ -449,13 +307,13 @@ get_drivers<- function(R, i){
 #' @return vector of colors corresponding to each platform
 #' 
 get_plat_colors <- function(
-  R,
-  plat_list
+    R,
+    plat_list
 ){
   qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
   col_vector = unlist(mapply(brewer.pal,
-                               qual_col_pals$maxcolors,
-                               rownames(qual_col_pals)))[1:length(R$platforms)]
+                             qual_col_pals$maxcolors,
+                             rownames(qual_col_pals)))[1:length(R$platforms)]
   mapply(function(x) col_vector[which(R$platform == x)], plat_list)
 }
 

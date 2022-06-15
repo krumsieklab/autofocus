@@ -17,12 +17,12 @@ source(codes.makepath("autofocus/Backend_Modules.R"))
 #' sample and molecular annotations, hierarchical structure, cluster membership
 #' node order within the hierarchical structure and a color vector for the platforms
 input_xls <- function(
-  mol_files,
-  sample_sheet,
-  sample_id,
-  phenotype,
-  confounders,
-  cores
+    mol_files,
+    sample_sheet,
+    sample_id,
+    phenotype,
+    confounders,
+    cores
 ){
   # TODO: read in sheets. Each mol_sheet should have
   # two excel sheets, one is data (preprocessed), one is molecular annotations
@@ -55,12 +55,12 @@ input_xls <- function(
 #' node order within the hierarchical structure and a color vector for the platforms
 
 initialize_R <- function(
-  data.matrix, # Matrix of raw data (samples * nodes)
-  sample.data, # Matrix of sample annotations
-  mol.data, # Matrix of node annotations
-  confounders, # Vector of confounder names (must be found in sample data)
-  phenotype, # Name of column containing disease phenotype of interest
-  cores = 4
+    data.matrix, # Matrix of raw data (samples * nodes)
+    sample.data, # Matrix of sample annotations
+    mol.data, # Matrix of node annotations
+    confounders, # Vector of confounder names (must be found in sample data)
+    phenotype, # Name of column containing disease phenotype of interest
+    cores = 4
 ){
   
   # Organize input data
@@ -129,19 +129,48 @@ initialize_R <- function(
 bind_SE_with_NA <- function(platforms, sample_id){
   
   # Set the column names of each platform to the universal sample identifier
-  platforms <- lapply(platforms, function(i) colnames(i)<-colData(i)[[sample_id]])
+  platforms <- lapply(platforms, function(i) {
+    colnames(i)<-colData(i)[[sample_id]]
+    i}
+  )
   
   # Bind the assay data, order
-  full_assay <- lapply(platforms, function(i) data.frame(assay(i))) %>% bind_rows()
-  full_assay<-full_assay[,order(as.numeric(colnames(full_assay)))]
+  full_assay <- lapply(platforms, function(i) data.frame(assay(i), check.names=FALSE)) %>% bind_rows()
   
   columns_df <- lapply(platforms, function(i) data.frame(colData(i)))
-  full_colData <- Reduce(function(x, y) merge(x, y, by=colnames(columns_df[[1]]), all=T), columns_df)
-  full_colData[[sample_id]] <- sapply(full_colData[[sample_id]], function(x) gsub("-", ".", x) )
-  full_colData <- full_colData[order(as.numeric(full_colData[[sample_id]])),]
   
-  full_rowData <- lapply(platforms, function(i) data.frame(rowData(i))) %>% bind_rows()
+  full_colData <- Reduce(function(x, y) merge(x, y, by=colnames(columns_df[[1]]), all=T), columns_df)
+  rownames(full_colData) <- full_colData$SampleId
+  full_colData <- full_colData[colnames(full_assay),]
+  
+  full_rowData <- matchRowClasses(platforms)
   
   SummarizedExperiment(assays = full_assay, colData = full_colData, rowData = full_rowData)
 }
 
+
+
+matchRowClasses <-  function(platforms){
+  
+  rows_df <- lapply(platforms, function(i) data.frame(rowData(i)))
+  
+  row_names_types <- lapply(rows_df, function(x) {
+    data.frame(Name = names(x), Type = sapply(x, typeof))
+  }) %>% 
+    bind_rows()  %>%
+    group_by(Name) %>%
+    slice(1) %>%
+    ungroup() %>% 
+    droplevels()
+  
+  
+  for(x in 1:length(rows_df)){
+    for (i in 1:ncol(rows_df[[x]])){
+      class(rows_df[[x]][,i])<- as.character(row_names_types$Type[which(row_names_types$Name == colnames(rows_df[[x]])[i])])
+    }
+    
+  } 
+  
+  rows_df %>% bind_rows()
+  
+}

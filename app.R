@@ -27,12 +27,12 @@ body <- dashboardBody(
                   tabPanel("Tree View",plotlyOutput("dendro")),
                   tabPanel("Peak List",dataTableOutput("all_modules_table")),
                   tabPanel("Analyte List",dataTableOutput("analyte_table")),
-                  sliderInput("threshold", "Density Threshold:", min=0, max=1, value=0.95)),
-          tabBox(title = NULL, 
+                  sliderInput("threshold", "Density Threshold:", min=0, max=1, value=0.8)),
+           tabBox(title = NULL, 
                   width=12,
                   tabPanel("Module members", dataTableOutput("single_module_table")),
                   tabPanel("Module Network and Drivers", 
-                    fluidRow(column(forceNetworkOutput("network"),width=9), column(dataTableOutput("drivers"),width=11))),
+                           fluidRow(column(forceNetworkOutput("network"),width=9), column(dataTableOutput("drivers"),width=11))),
                   tabPanel("Annotation plots", sankeyNetworkOutput("barplots"))))
 )
 
@@ -42,7 +42,7 @@ ui<-dashboardPage(dashboardHeader(title="AutoFocus Run Results"),
 
 
 server <- function(input, output) {
-
+  
   y_axis <- list(
     title = "",
     showline = TRUE,
@@ -70,7 +70,7 @@ server <- function(input, output) {
   })
   
   output$dendro <- renderPlotly({
-
+    
     ### Dendrogram ###
     dend_network<-plotly::layout(
       plot_dend(R, input$threshold),
@@ -166,7 +166,6 @@ server <- function(input, output) {
       '
       ))
     sn
-    #get_anno_data_sankey(R, selected_node$n)
   })
   
   ### Network/Driver section ###
@@ -187,12 +186,12 @@ server <- function(input, output) {
                  zoom=T,
                  opacity=1,
                  legend=T,
-                 )
+    )
   })
-
+  
   output$drivers<-DT::renderDataTable(data.frame(R$annos)[rownames(R$annos)%in%get_drivers(R,selected_node$n),], caption="Driver information")
   
-
+  
   # Click on a peak in the peak list
   selected_node = reactiveValues(n = NA, last=NA)
   observeEvent(input$all_modules_table_row_last_clicked,{
@@ -212,7 +211,7 @@ server <- function(input, output) {
                                           mode="markers",
                                           text = c(old_label,new_label),
                                           marker = list(color=c(color_list$colors[selected_node$last],"yellow"), size = 9)))
-
+    
   })
   
   # Click on an analyte in the analyte list
@@ -225,7 +224,7 @@ server <- function(input, output) {
       shinyalert(
         title = "Insignificant", type = "warning",
         text="This analyte does not belong to a significant module, please choose another"
-        )
+      )
     }
     else{
       selected_analyte$last = selected_analyte$n
@@ -257,8 +256,8 @@ server <- function(input, output) {
                                                                   color_list$colors[selected_analyte$last],
                                                                   "blue"))))
       
-      }
-    })
+    }
+  })
   
   # Click on a node in the dendrogram
   observeEvent(event_data(event = "plotly_click", source="A"),{
