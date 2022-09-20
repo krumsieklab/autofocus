@@ -1,5 +1,6 @@
 library(autofocus)
 library(magrittr)
+library(SummarizedExperiment)
 
 load(data.makepath("ADNI/ADNI_data_for_Annalise/ADNI_data_for_Annalise.RData"))
 
