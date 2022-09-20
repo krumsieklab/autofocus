@@ -1,6 +1,7 @@
 #rm(list=ls())
 # alzheimer data
 library(dplyr)
+library(SummarizedExperiment)
 # reading data sets
 
 phe =  read.csv2(data.makepath("/ADNI/ADNI_datasets_from_Matthias/adni1go2.phenotypes.covariates.csv"), na.string="NA",header=T,sep=",",dec = ".")
@@ -63,6 +64,6 @@ colnames(SE.mkl)<-mkl[,1]
 rowData(SE.mkl)$name <- colnames(mkl)[2:ncol(mkl)]
 rowData(SE.mkl)$platform <- rep('mkl', times = (ncol(mkl)-1))
 
-ADNI_platforms <- bind_SE_with_NA(list(SE.bba, SE.bp1, SE.ntl, SE.mkl), sample_id="RID",mol_id="name")
+ADNI_platforms <- bind_SE_with_NA(list(SE.bba, SE.bp1, SE.ntl, SE.mkl), sample_id="RID")
 rowData(ADNI_platforms)$chemical_classes<- lapply(rownames(ADNI_platforms), function(i){names(fset.list)[grep(i,fset.list)[1]]}) %>% unlist()
 

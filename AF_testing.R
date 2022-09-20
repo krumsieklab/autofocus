@@ -7,7 +7,7 @@ library(magrittr)
 library(dplyr)
 source(codes.makepath("autofocus/Backend_Modules.R"))
 source(codes.makepath("autofocus/initialize.R"))
-source(codes.makepath("autofocus/ModuleTesting.R"))
+#source(codes.makepath("autofocus/ModuleTesting.R"))
 
 
 ####ADNI####
@@ -17,6 +17,7 @@ get_adni_R<- function(){
   # Load ADNI
   load(data.makepath("ADNI/ADNI_data_for_Annalise/ADNI_data_for_Annalise.RData"))
   
+  # @KC: What is ADNI_platforms here?
   ADNI <- initialize_R(t(assay(ADNI_platforms)),
                        sample.data = colData(ADNI_platforms),
                        mol.data = rowData(ADNI_platforms),
@@ -25,6 +26,7 @@ get_adni_R<- function(){
   ADNI
 }
 
+dfs <- get_adni_R()
 data.mat <- dfs$bp1[3:ncol(dfs$bp1)]
 pheno.mat <- dfs$phe[dfs$phe$RID%in%dfs$bp1$RID,]
 mol.mat <-  lapply(colnames(data.mat), function(i){names(fset.list)[grep(i,fset.list)[1]]}) %>% unlist()

@@ -125,7 +125,6 @@ initialize_R <- function(
 #' 
 #' @return A SummarizedExperiment object with all platforms data
 #'
-
 bind_SE_with_NA <- function(platforms, sample_id){
   
   # Set the column names of each platform to the universal sample identifier
