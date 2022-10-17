@@ -2,6 +2,7 @@
 
 export(bind_se_with_na)
 export(initialize_R)
+export(merge_se)
 export(run_autofocus)
 import(networkD3)
 import(plotly)
