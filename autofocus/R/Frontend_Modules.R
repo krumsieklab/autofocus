@@ -116,10 +116,15 @@ filter_peaks <- function(R, peak_list, threshold){
         length_pride <- 1
       }
       else{
-        num_sig <- R$clust_info$densities[sapply(R$clusts[[pride]], function(i) i + dim(R$HCL$merge)[1])] %>% sum()
+        num_sig <- R$clust_info$densities[pride] * R$clust_info$Size[pride]
         length_pride <- R$clusts[[pride]] %>% length()
       }
 
+      num_sig_questionable <- R$clust_info$densities[questionable_kid] * R$clust_info$Size[questionable_kid]
+      if (num_sig_questionable ==0){
+        return(pride)
+      }
+      
       length_question <- if (questionable_kid > dim(R$HCL$merge)[1]) 1 else R$clusts[[questionable_kid]] %>% length()
 
       new_thresh <- num_sig/ (length_pride + length_question)
@@ -201,6 +206,8 @@ plot_dend<-function(R, sig_threshold){
     # Add node markers
     add_trace(type='scatter',
               mode = "markers",
+              text = R$clust_info$label,
+              hovertemplate = paste('<b>%{text}</b>'),
               marker = list(color=~color)) %>%
     add_trace(x = R$clust_info$Coord_X[colors],
               y = R$clust_info$Coord_Y[colors],
