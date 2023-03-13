@@ -2,7 +2,7 @@
 
 export(bind_se_with_na)
 export(initialize_R)
-export(load__xls)
+export(load_xls)
 export(merge_se)
 export(run_autofocus)
 import(networkD3)

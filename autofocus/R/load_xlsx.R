@@ -27,7 +27,7 @@
 #' @author KC
 #'
 #' @export
-load__xls <- function(file,
+load_xls <- function(file,
                       data_sheet,
                       feature_sheet,
                       sample_sheet){
