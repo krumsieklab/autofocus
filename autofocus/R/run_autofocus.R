@@ -15,12 +15,14 @@
 #' @export
 run_autofocus <- function(R, anno_list = c("")){
 
+  # move the anno_list argument to the intialize functino
+
   appDir <<- system.file("shiny-app", "autofocus", package = "autofocus")
 
   if(appDir == "") stop("Shiny app directory not found. Try re-installing autofocus package.")
 
-  R$annos <- R$annos[anno_list]
-  color_palette<- MetBrewer::met.brewer("Hiroshige",10)
+  R$annos <<- R$annos[anno_list]
+  color_palette<<- MetBrewer::met.brewer("Hiroshige",10)
   body <- shinydashboard::dashboardBody(
     fluidRow(tabBox(title=NULL,
                     width=12,
