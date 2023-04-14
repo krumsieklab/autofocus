@@ -16,12 +16,27 @@ get_node_label <- function(R, i){
   if (i > (internal_nodes)) return(R$HCL$labels[(i - internal_nodes)] )
 
   #Internal node case
-  return(paste("<br>Cluster ID:",
-               R$clust_info$ClusterID[[i]] ,
-               "</br><br>Significant Children Density: ",
-               R$clust_info$densities[[i]],
-               "</br><br>Number of Significant Children: ",
-               sum(R$clust_info$densities[(R$clusts[[i]]+dim(R$HCL$merge)[1])])))
+  if("densities" %in% names(R$clust_info)){
+    return(paste("<br>Cluster ID:",
+                 R$clust_info$ClusterID[[i]] ,
+                 "</br><br>Significant Children Density: ",
+                 R$clust_info$densities[[i]],
+                 "</br><br>Number of Significant Children: ",
+                 sum(R$clust_info$densities[(R$clusts[[i]]+dim(R$HCL$merge)[1])])))
+  }else{
+    return(paste("<br>Cluster ID:",
+                 R$clust_info$ClusterID[[i]] ,
+                 "</br><br>Significant Children Density - Phenotype 1: ",
+                 R$clust_info$pheno1_densities[[i]],
+                 "</br><br>Number of Significant Children - Phenotype 1: ",
+                 sum(R$clust_info$pheno1_densities[(R$clusts[[i]]+dim(R$HCL$merge)[1])]),
+                 "</br><br>Significant Children Density - Phenotype 2: ",
+                 R$clust_info$pheno2_densities[[i]],
+                 "</br><br>Number of Significant Children - Phenotype 2: ",
+                 sum(R$clust_info$pheno2_densities[(R$clusts[[i]]+dim(R$HCL$merge)[1])])
+    ))
+  }
+
 }
 
 #' Wrapper for identify_peaks function
@@ -36,28 +51,93 @@ get_node_label <- function(R, i){
 #' @noRd
 peak_finder_wrapper<-function (R, threshold){
   hc <- R$HCL
-  potential_peaks <- identify_peaks(R, dim(hc$merge)[1], threshold, c())
-  filtered_peaks <- filter_peaks(R, potential_peaks, threshold)
-  potential_peaks <- potential_peaks[!(potential_peaks %in% filtered_peaks)]
-  piggy_backers <- c()
-  while(length(potential_peaks)!=0){
-    new_potential_peaks <- c()
-    for (i in potential_peaks){
-      new_potential_peaks <- c(new_potential_peaks,identify_peaks(R, get_disappointment_child(i, R, threshold), threshold, c()))
-    }
-    new_filtered_peaks <- filter_peaks(R, new_potential_peaks, threshold)
-    piggy_backers <- c(piggy_backers, potential_peaks)
-    potential_peaks <- new_potential_peaks
-    potential_peaks <- potential_peaks[!(potential_peaks %in% new_filtered_peaks)]
-    filtered_peaks <- c(filtered_peaks, new_filtered_peaks)
-  }
+  if("densities" %in% names(R$clust_info)){
+    potential_peaks <- identify_peaks(R, dim(hc$merge)[1], threshold, c())
+    filtered_peaks <- filter_peaks(R, potential_peaks, threshold)
+    potential_peaks <- potential_peaks[!(potential_peaks %in% filtered_peaks)]
+    # piggy_backers <- c()
+    # while(length(potential_peaks)!=0){
+    #   new_potential_peaks <- c()
+    #   for (i in potential_peaks){
+    #     new_potential_peaks <- c(new_potential_peaks,identify_peaks(R, get_disappointment_child(i, R, threshold), threshold, c()))
+    #   }
+    #   new_filtered_peaks <- filter_peaks(R, new_potential_peaks, threshold)
+    #   piggy_backers <- c(piggy_backers, potential_peaks)
+    #   potential_peaks <- new_potential_peaks
+    #   potential_peaks <- potential_peaks[!(potential_peaks %in% new_filtered_peaks)]
+    #   filtered_peaks <- c(filtered_peaks, new_filtered_peaks)
+    # }
 
-  color_list <- rep("black", times = dim(R$clust_info)[1])
-  color_list[piggy_backers]<-'yellow'
-  color_list[filtered_peaks]<-"red"
-  sig_kids <- intersect(which(R$clust_info$Size == 1), which(R$clust_info$densities==1))
-  color_list[sig_kids]<-"red"
-  color_list
+    color_list <- rep("#666666", times = dim(R$clust_info)[1])
+    #color_list[piggy_backers]<-'yellow'
+    color_list[filtered_peaks]<-"#E7298A"
+    sig_kids <- intersect(which(R$clust_info$Size == 1), which(R$clust_info$densities==1))
+    color_list[sig_kids]<-"#E7298A"
+    color_list
+
+  }else if("pheno1_densities" %in% names(R$clust_info) && "pheno2_densities" %in% names(R$clust_info)){
+    # get peaks and piggybackers for phenotype 1
+    potential_peaks <- identify_peaks(R, dim(hc$merge)[1], threshold, c(), "pheno1_densities")
+    filtered_peaks <- filter_peaks(R, potential_peaks, threshold, "pheno1_densities")
+    potential_peaks <- potential_peaks[!(potential_peaks %in% filtered_peaks)]
+    # piggy_backers <- c()
+    # while(length(potential_peaks)!=0){
+    #   new_potential_peaks <- c()
+    #   for (i in potential_peaks){
+    #     new_potential_peaks <- c(new_potential_peaks,identify_peaks(R, get_disappointment_child(i, R, threshold, "pheno1_densities"), threshold, c(), "pheno1_densities"))
+    #   }
+    #   new_filtered_peaks <- filter_peaks(R, new_potential_peaks, threshold)
+    #   piggy_backers <- c(piggy_backers, potential_peaks)
+    #   potential_peaks <- new_potential_peaks
+    #   potential_peaks <- potential_peaks[!(potential_peaks %in% new_filtered_peaks)]
+    #   filtered_peaks <- c(filtered_peaks, new_filtered_peaks)
+    # }
+    pheno1_peaks <- filtered_peaks
+    # pheno1_piggy <- piggy_backers
+
+    # get peaks and piggybackers for phenotype 2
+    potential_peaks <- identify_peaks(R, dim(hc$merge)[1], threshold, c(), "pheno2_densities")
+    filtered_peaks <- filter_peaks(R, potential_peaks, threshold, "pheno2_densities")
+    potential_peaks <- potential_peaks[!(potential_peaks %in% filtered_peaks)]
+    # piggy_backers <- c()
+    # while(length(potential_peaks)!=0){
+    #   new_potential_peaks <- c()
+    #   for (i in potential_peaks){
+    #     new_potential_peaks <- c(new_potential_peaks,identify_peaks(R, get_disappointment_child(i, R, threshold, "pheno2_densities"), threshold, c(), "pheno2_densities"))
+    #   }
+    #   new_filtered_peaks <- filter_peaks(R, new_potential_peaks, threshold)
+    #   piggy_backers <- c(piggy_backers, potential_peaks)
+    #   potential_peaks <- new_potential_peaks
+    #   potential_peaks <- potential_peaks[!(potential_peaks %in% new_filtered_peaks)]
+    #   filtered_peaks <- c(filtered_peaks, new_filtered_peaks)
+    # }
+    pheno2_peaks <- filtered_peaks
+    # pheno2_piggy <- piggy_backers
+
+    # find unique and overlapping colors for the two phenotypes
+    common_peaks <- intersect(pheno1_peaks, pheno2_peaks)
+    # common_piggy <- intersect(pheno1_piggy, pheno2_piggy)
+
+    color_list <- rep("#666666", times = dim(R$clust_info)[1])
+    color_list[pheno1_peaks]<-'#E7298A'
+    color_list[pheno2_peaks]<-"#A6D854"
+    color_list[common_peaks] <- "#FC8D62"
+    # color_list[pheno1_piggy] <- "orange"
+    # color_list[pheno2_piggy] <- "green"
+    # color_list[common_piggy] <- "yellow"
+
+    # get color of significant leaves
+    pheno1_sig_kids <- intersect(which(R$clust_info$Size == 1), which(R$clust_info$pheno1_densities==1))
+    pheno2_sig_kids <- intersect(which(R$clust_info$Size == 1), which(R$clust_info$pheno2_densities==1))
+    common_sig_kids <- intersect(pheno1_sig_kids, pheno2_sig_kids)
+    color_list[pheno1_sig_kids]<-"#E7298A"
+    color_list[pheno2_sig_kids] <- "#A6D854"
+    color_list[common_sig_kids] <- "#FC8D62"
+    color_list
+
+  }else{
+    stop("R$clust_info contains no valid column names for densities")
+  }
 }
 
 #' Find top peaks at user-defined threshold
@@ -68,20 +148,22 @@ peak_finder_wrapper<-function (R, threshold){
 #' @param i internal node index to test
 #' @param threshold user-defined enrichment threshold
 #' @param indices Vector collecting peaks
+#' @param dense_col Name of the column in the clust_info data frame containing densities for the
+#'    phenotype of interest.
 #'
 #' @return list of peaks to be considered by user
 #'
 #' @noRd
-identify_peaks <- function(R, i, threshold, indices){
+identify_peaks <- function(R, i, threshold, indices, dense_col="densities"){
   # Leaf Case
   if (i < 0) return(indices)
   else{
-    if (R$clust_info$densities[i] > threshold){
+    if (R$clust_info[[dense_col]][i] > threshold){
       return(c(indices, i))
     }
     else{
-      left_peaks <- identify_peaks(R, R$HCL$merge[i,1], threshold, indices)
-      right_peaks <- identify_peaks(R, R$HCL$merge[i,2], threshold, indices)
+      left_peaks <- identify_peaks(R, R$HCL$merge[i,1], threshold, indices, dense_col)
+      right_peaks <- identify_peaks(R, R$HCL$merge[i,2], threshold, indices, dense_col)
       indices <- c(indices, left_peaks, right_peaks)
     }
   }
@@ -95,20 +177,22 @@ identify_peaks <- function(R, i, threshold, indices){
 #' @param R R struct
 #' @param peak_list list of potential peaks
 #' @param threshold user-defined threshold
+#' @param dense_col Name of column in clust_info data frame that contains the densities for the
+#'    phenotype of interest.
 #'
 #' @return list of peaks to be considered by user
 #'
 #' @noRd
-filter_peaks <- function(R, peak_list, threshold){
+filter_peaks <- function(R, peak_list, threshold, dense_col = "densities"){
+
   lapply(peak_list, function(i){
     kids <- R$HCL$merge[i,] %>%
       lapply(function(i) if (i < 0) return(abs(i)+dim(R$HCL$merge)[1]) else return(i)) %>% unlist()
-    kids_dens <-  R$clust_info$densities[kids]
+    kids_dens <-  R$clust_info[[dense_col]][kids]
+
     if (all(kids_dens>= threshold)){
       return (i)
-    }
-
-    else{
+    }else{
       pride <- kids[which(kids_dens == max(kids_dens))]
       questionable_kid <- kids[which(kids_dens == min(kids_dens))]
       if (pride > dim(R$HCL$merge)[1]){
@@ -116,15 +200,15 @@ filter_peaks <- function(R, peak_list, threshold){
         length_pride <- 1
       }
       else{
-        num_sig <- R$clust_info$densities[pride] * R$clust_info$Size[pride]
+        num_sig <- R$clust_info[[dense_col]][pride] * R$clust_info$Size[pride]
         length_pride <- R$clusts[[pride]] %>% length()
       }
 
-      num_sig_questionable <- R$clust_info$densities[questionable_kid] * R$clust_info$Size[questionable_kid]
+      num_sig_questionable <- R$clust_info[[dense_col]][questionable_kid] * R$clust_info$Size[questionable_kid]
       if (num_sig_questionable ==0){
         return(pride)
       }
-      
+
       length_question <- if (questionable_kid > dim(R$HCL$merge)[1]) 1 else R$clusts[[questionable_kid]] %>% length()
 
       new_thresh <- num_sig/ (length_pride + length_question)
@@ -136,8 +220,8 @@ filter_peaks <- function(R, peak_list, threshold){
         return(pride)
       }
     }
-
   }) %>% unlist()
+
 }
 
 #' Get 'disappointment' child
@@ -151,10 +235,10 @@ filter_peaks <- function(R, peak_list, threshold){
 #' @return The node ID of the child with the lesser density
 #'
 #' @noRd
-get_disappointment_child <- function(i, R, threshold){
+get_disappointment_child <- function(i, R, threshold, dense_col="densities"){
   kids <- R$HCL$merge[i,] %>%
     lapply(function(i) if (i < 0) return(abs(i)+dim(R$HCL$merge)[1]) else return(i)) %>% unlist()
-  kids_dens <-  R$clust_info$densities[kids]
+  kids_dens <-  R$clust_info[[dense_col]][kids]
   R$HCL$merge[i,][which(kids_dens == min(kids_dens))]
 }
 
@@ -191,31 +275,31 @@ get_ancestors <- function(R, i, parent_list ){
 #'
 #' @noRd
 plot_dend<-function(R, sig_threshold){
-  R$clust_info$label <-mapply(function(i) get_node_label(R, i), 1:nnodes(R$HCL))
+  R$clust_info$label <-mapply(function(i) get_node_label(R, i), 1:dendextend::nnodes(R$HCL))
   R$clust_info$color <- peak_finder_wrapper(R, sig_threshold)
-  colors <- which(R$clust_info$color !="black")
+  colors <- which(R$clust_info$color !="#666666")
   # Start plotly
-  R$clust_info %>% plot_ly(x = ~Coord_X,
-                           y = ~Coord_Y, source="A") %>%
+  R$clust_info %>% plotly::plot_ly(x = ~Coord_X,
+                                   y = ~Coord_Y, source="A") %>%
     # Add edges between nodes
-    add_segments(
+    plotly::add_segments(
       x=R$dend_data$segments$x,
       xend=R$dend_data$segments$xend,
       y=R$dend_data$segments$y,
       yend=R$dend_data$segments$yend)%>%
     # Add node markers
-    add_trace(type='scatter',
-              mode = "markers",
-              text = R$clust_info$label,
-              hovertemplate = paste('<b>%{text}</b>'),
-              marker = list(color=~color)) %>%
-    add_trace(x = R$clust_info$Coord_X[colors],
-              y = R$clust_info$Coord_Y[colors],
-              type='scatter',
-              mode = "markers",
-              text = R$clust_info$label[colors],
-              hovertemplate = paste('<b>%{text}</b>'),
-              marker = list(color=R$clust_info$color[colors]))
+    plotly::add_trace(type='scatter',
+                      mode = "markers",
+                      text = R$clust_info$label,
+                      hovertemplate = paste('<b>%{text}</b>'),
+                      marker = list(color=~color)) %>%
+    plotly::add_trace(x = R$clust_info$Coord_X[colors],
+                      y = R$clust_info$Coord_Y[colors],
+                      type='scatter',
+                      mode = "markers",
+                      text = R$clust_info$label[colors],
+                      hovertemplate = paste('<b>%{text}</b>'),
+                      marker = list(color=R$clust_info$color[colors]))
 }
 
 #' Get drivers
@@ -230,5 +314,5 @@ plot_dend<-function(R, sig_threshold){
 #' @noRd
 get_drivers<- function(R, i){
   g <- R$graphs[[i]]
-  V(g)$name[V(g)$Driver]
+  igraph::V(g)$name[igraph::V(g)$Driver]
 }

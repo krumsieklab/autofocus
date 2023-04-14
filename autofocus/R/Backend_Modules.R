@@ -124,17 +124,18 @@ get_parent <- function(
 #' @param R R struct
 #' @param phenotype disease pheotype
 #' @param confounders vectors of confounder names
+#' @param method Method to use for p-value adjustment. Default: "fdr".
 #'
 #' @return Returns the densities and number of significant descendants of each node
 #'
 #' @noRd
-get_sig_child_density <- function(R, phenotype, confounders){
+get_sig_child_density <- function(R, phenotype, confounders, method="fdr"){
   sig_kids<-lapply(1:dendextend::nleaves(R$HCL), function(i) {
     data <- data.frame(pheno=R$samples[[phenotype]], molecule = R$data[,i], R$samples[,confounders])
     reg <- lm(pheno ~ ., data = data)
     summary(reg)$coefficients["molecule", "Pr(>|t|)"]
 
-  }) %>% unlist %>%  p.adjust(method="bonferroni")
+  }) %>% unlist %>%  p.adjust(method=method)
 
   sig_kids<-1*(sig_kids<0.05)
 
@@ -161,62 +162,127 @@ get_sig_child_density <- function(R, phenotype, confounders){
 #' @noRd
 get_edges_linear <- function(i, R, phenotype, confounders){
 
-  if (!(R$clust_info$mgm_capable[i])){
-    return (NA)
-  }
-
-  else{
-    members <-  R$clusts[i][[1]]
-
-    # Get variable type of phenotype and confounders
-    # Either categorical ("c") or gaussian ("g")
-    # If categorical, get number of categories
-
-    #phenotype_type <- get_variable_type(R$samples[[phenotype]])
-    #phenotype_cat <- get_num_categories(R$samples[[phenotype]])
-
-    confounder_data <- R$samples[,confounders]
-
-
-    #Combine all data with confounders
-    full_data<-data.frame(phenotype = R$samples[[phenotype]],
-                          R$data[,members],
-                          confounder_data)
-
-    full_data <-as.matrix(as.data.frame(lapply(full_data, as.numeric)))
-    # Remove samples with NAs
-    no_nas = apply(is.na(full_data),1,sum) == 0
-    data_no_na <- full_data[no_nas,]
-
-    types <- apply(data_no_na, 2, get_variable_type) %>% as.vector()
-    levels <- apply(data_no_na, 2, get_num_categories) %>% as.vector()
-
-    if('c' %in% types) {
-      ind_cat <- which(types == 'c')
-      to_remove<-c()
-      for(i in ind_cat) {
-        l_frqu <- table(data_no_na[,i])
-        cats_to_remove <- names(l_frqu)[which(l_frqu<=1)]
-        if(length(cats_to_remove)>0){
-          levels[i]<-levels[i] - length(cats_to_remove)
-          to_remove<-c(to_remove, which(data_no_na[,i]%in% cats_to_remove))
-        }
-      } # this does not catch the case where one category is not present at all; but this is catched by comparing specified levels and real levels
+  if(length(phenotype)==1){
+    if (!(R$clust_info$mgm_capable[i])){
+      return (NA)
     }
-    if(length(to_remove)>0){
-      data_no_na <- data_no_na[-to_remove,]
-    }
-    # Find direct connections with phenotype in mgm
-    fit_mgm <- mgm::mgm(data_no_na, type=types, level=levels, lambdaSel="EBIC")
-    adj_mat <- 1* (fit_mgm$pairwise$wadj!=0)
 
-    # Create graph
-    colnames(adj_mat)<- c(phenotype, colnames(R$data)[members], confounders)
-    G<-igraph::graph_from_adjacency_matrix(adj_mat, add.rownames = T)
-    igraph::V(G)$NodeType <- c("phenotype", rep("analyte",length(members)), rep("confounder", length(confounders)))
-    igraph::V(G)$Driver <- igraph::V(G)$name %in% igraph::neighbors(G,phenotype)$name[igraph::neighbors(G,phenotype)$NodeType =="analyte"]
-    igraph::V(G)$color <- c("blue", rep("red",length(members)), rep("grey", length(confounders)))
-    G
+    else{
+      members <-  R$clusts[i][[1]]
+
+      # Get variable type of phenotype and confounders
+      # Either categorical ("c") or gaussian ("g")
+      # If categorical, get number of categories
+
+      #phenotype_type <- get_variable_type(R$samples[[phenotype]])
+      #phenotype_cat <- get_num_categories(R$samples[[phenotype]])
+
+      confounder_data <- R$samples[,confounders]
+
+
+      #Combine all data with confounders
+      full_data<-data.frame(phenotype = R$samples[[phenotype]],
+                            R$data[,members],
+                            confounder_data)
+
+      full_data <-as.matrix(as.data.frame(lapply(full_data, as.numeric)))
+      # Remove samples with NAs
+      no_nas = apply(is.na(full_data),1,sum) == 0
+      data_no_na <- full_data[no_nas,]
+
+      types <- apply(data_no_na, 2, get_variable_type) %>% as.vector()
+      levels <- apply(data_no_na, 2, get_num_categories) %>% as.vector()
+
+      if('c' %in% types) {
+        ind_cat <- which(types == 'c')
+        to_remove<-c()
+        for(i in ind_cat) {
+          l_frqu <- table(data_no_na[,i])
+          cats_to_remove <- names(l_frqu)[which(l_frqu<=1)]
+          if(length(cats_to_remove)>0){
+            levels[i]<-levels[i] - length(cats_to_remove)
+            to_remove<-c(to_remove, which(data_no_na[,i]%in% cats_to_remove))
+          }
+        } # this does not catch the case where one category is not present at all; but this is catched by comparing specified levels and real levels
+      }
+      if(length(to_remove)>0){
+        data_no_na <- data_no_na[-to_remove,]
+      }
+      # Find direct connections with phenotype in mgm
+      fit_mgm <- mgm::mgm(data_no_na, type=types, level=levels, lambdaSel="EBIC")
+      adj_mat <- 1* (fit_mgm$pairwise$wadj!=0)
+
+      # Create graph
+      colnames(adj_mat)<- c(phenotype, colnames(R$data)[members], confounders)
+      G<-igraph::graph_from_adjacency_matrix(adj_mat, add.rownames = T)
+      igraph::V(G)$NodeType <- c("phenotype", rep("analyte",length(members)), rep("confounder", length(confounders)))
+      igraph::V(G)$Driver <- igraph::V(G)$name %in% igraph::neighbors(G,phenotype)$name[igraph::neighbors(G,phenotype)$NodeType =="analyte"]
+      igraph::V(G)$color <- c("blue", rep("red",length(members)), rep("grey", length(confounders)))
+      G
+    }
+  }else if(length(phenotype)==2){
+    if (!(R$clust_info$pheno1_mgm_capable[i]) & !(R$clust_info$pheno2_mgm_capable[i])){
+      return (NA)
+    }
+
+    else{
+      members <-  R$clusts[i][[1]]
+
+      # Get variable type of phenotype and confounders
+      # Either categorical ("c") or gaussian ("g")
+      # If categorical, get number of categories
+
+      #phenotype_type <- get_variable_type(R$samples[[phenotype]])
+      #phenotype_cat <- get_num_categories(R$samples[[phenotype]])
+
+      confounder_data <- R$samples[,confounders]
+
+
+      #Combine all data with confounders
+      full_data<-data.frame(R$data[,members],
+                            confounder_data)
+      full_data$phenotype1 = R$samples[[phenotype[1]]]
+      full_data$phenotype2 = R$samples[[phenotype[2]]]
+
+      pheno_names <- phenotype
+
+      full_data <-as.matrix(as.data.frame(lapply(full_data, as.numeric)))
+      # Remove samples with NAs
+      no_nas = apply(is.na(full_data),1,sum) == 0
+      data_no_na <- full_data[no_nas,]
+
+      types <- apply(data_no_na, 2, get_variable_type) %>% as.vector()
+      levels <- apply(data_no_na, 2, get_num_categories) %>% as.vector()
+
+      if('c' %in% types) {
+        ind_cat <- which(types == 'c')
+        to_remove<-c()
+        for(i in ind_cat) {
+          l_frqu <- table(data_no_na[,i])
+          cats_to_remove <- names(l_frqu)[which(l_frqu<=1)]
+          if(length(cats_to_remove)>0){
+            levels[i]<-levels[i] - length(cats_to_remove)
+            to_remove<-c(to_remove, which(data_no_na[,i]%in% cats_to_remove))
+          }
+        } # this does not catch the case where one category is not present at all; but this is catched by comparing specified levels and real levels
+      }
+      if(length(to_remove)>0){
+        data_no_na <- data_no_na[-to_remove,]
+      }
+      # Find direct connections with phenotype in mgm
+      fit_mgm <- mgm::mgm(data_no_na, type=types, level=levels, lambdaSel="EBIC")
+      adj_mat <- 1* (fit_mgm$pairwise$wadj!=0)
+
+      # Create graph
+      colnames(adj_mat)<- c(colnames(R$data)[members], confounders, pheno_names)
+      G<-igraph::graph_from_adjacency_matrix(adj_mat, add.rownames = T)
+      igraph::V(G)$NodeType <- c(rep("analyte",length(members)), rep("confounder", length(confounders)), rep("phenotype", length(pheno_names)))
+      igraph::V(G)$Driver <- igraph::V(G)$name %in% igraph::neighbors(G,pheno_names)$name[igraph::neighbors(G,pheno_names)$NodeType =="analyte"]
+      igraph::V(G)$color <- c(rep("red",length(members)), rep("grey", length(confounders)), rep("blue",length(pheno_names)))
+      G
+    }
+  }else{
+    stop("autofocus does not support more than two phenotypes.")
   }
 }
 
