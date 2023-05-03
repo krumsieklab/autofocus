@@ -80,18 +80,18 @@ peak_finder_wrapper<-function (R, threshold){
     potential_peaks <- identify_peaks(R, dim(hc$merge)[1], threshold, c(), "pheno1_densities")
     filtered_peaks <- filter_peaks(R, potential_peaks, threshold, "pheno1_densities")
     potential_peaks <- potential_peaks[!(potential_peaks %in% filtered_peaks)]
-    # piggy_backers <- c()
-    # while(length(potential_peaks)!=0){
-    #   new_potential_peaks <- c()
-    #   for (i in potential_peaks){
-    #     new_potential_peaks <- c(new_potential_peaks,identify_peaks(R, get_disappointment_child(i, R, threshold, "pheno1_densities"), threshold, c(), "pheno1_densities"))
-    #   }
-    #   new_filtered_peaks <- filter_peaks(R, new_potential_peaks, threshold)
-    #   piggy_backers <- c(piggy_backers, potential_peaks)
-    #   potential_peaks <- new_potential_peaks
-    #   potential_peaks <- potential_peaks[!(potential_peaks %in% new_filtered_peaks)]
-    #   filtered_peaks <- c(filtered_peaks, new_filtered_peaks)
-    # }
+    piggy_backers <- c()
+    while(length(potential_peaks)!=0){
+      new_potential_peaks <- c()
+      for (i in potential_peaks){
+        new_potential_peaks <- c(new_potential_peaks,identify_peaks(R, get_disappointment_child(i, R, threshold, "pheno1_densities"), threshold, c(), "pheno1_densities"))
+      }
+      new_filtered_peaks <- filter_peaks(R, new_potential_peaks, threshold)
+      piggy_backers <- c(piggy_backers, potential_peaks)
+      potential_peaks <- new_potential_peaks
+      potential_peaks <- potential_peaks[!(potential_peaks %in% new_filtered_peaks)]
+      filtered_peaks <- c(filtered_peaks, new_filtered_peaks)
+    }
     pheno1_peaks <- filtered_peaks
     # pheno1_piggy <- piggy_backers
 
@@ -99,18 +99,18 @@ peak_finder_wrapper<-function (R, threshold){
     potential_peaks <- identify_peaks(R, dim(hc$merge)[1], threshold, c(), "pheno2_densities")
     filtered_peaks <- filter_peaks(R, potential_peaks, threshold, "pheno2_densities")
     potential_peaks <- potential_peaks[!(potential_peaks %in% filtered_peaks)]
-    # piggy_backers <- c()
-    # while(length(potential_peaks)!=0){
-    #   new_potential_peaks <- c()
-    #   for (i in potential_peaks){
-    #     new_potential_peaks <- c(new_potential_peaks,identify_peaks(R, get_disappointment_child(i, R, threshold, "pheno2_densities"), threshold, c(), "pheno2_densities"))
-    #   }
-    #   new_filtered_peaks <- filter_peaks(R, new_potential_peaks, threshold)
-    #   piggy_backers <- c(piggy_backers, potential_peaks)
-    #   potential_peaks <- new_potential_peaks
-    #   potential_peaks <- potential_peaks[!(potential_peaks %in% new_filtered_peaks)]
-    #   filtered_peaks <- c(filtered_peaks, new_filtered_peaks)
-    # }
+    piggy_backers <- c()
+    while(length(potential_peaks)!=0){
+      new_potential_peaks <- c()
+      for (i in potential_peaks){
+        new_potential_peaks <- c(new_potential_peaks,identify_peaks(R, get_disappointment_child(i, R, threshold, "pheno2_densities"), threshold, c(), "pheno2_densities"))
+      }
+      new_filtered_peaks <- filter_peaks(R, new_potential_peaks, threshold)
+      piggy_backers <- c(piggy_backers, potential_peaks)
+      potential_peaks <- new_potential_peaks
+      potential_peaks <- potential_peaks[!(potential_peaks %in% new_filtered_peaks)]
+      filtered_peaks <- c(filtered_peaks, new_filtered_peaks)
+    }
     pheno2_peaks <- filtered_peaks
     # pheno2_piggy <- piggy_backers
 
@@ -155,6 +155,7 @@ peak_finder_wrapper<-function (R, threshold){
 #'
 #' @noRd
 identify_peaks <- function(R, i, threshold, indices, dense_col="densities"){
+  if(i == 441) print("FOUND IT!!!")
   # Leaf Case
   if (i < 0) return(indices)
   else{

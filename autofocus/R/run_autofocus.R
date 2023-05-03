@@ -26,16 +26,17 @@ run_autofocus <- function(R, anno_list = c("")){
   body <- shinydashboard::dashboardBody(
     fluidRow(tabBox(title=NULL,
                     width=12,
-                    tabPanel("Tree View",plotlyOutput("dendro")),
-                    tabPanel("Peak List",dataTableOutput("all_modules_table")),
-                    tabPanel("Analyte List",dataTableOutput("analyte_table")),
-                    sliderInput("threshold", "Density Threshold:", min=0, max=1, value=0.8)),
+                    tabPanel("Tree View",plotly::plotlyOutput("dendro")),
+                    tabPanel("Peak List",DT::dataTableOutput("all_modules_table")),
+                    tabPanel("Analyte List",DT::dataTableOutput("analyte_table")),
+                    sliderInput("threshold", "Density Threshold:", min=0, max=1, value=0.5)),
              tabBox(title = NULL,
                     width=12,
-                    tabPanel("Module members", dataTableOutput("single_module_table")),
+                    tabPanel("Module members", DT::dataTableOutput("single_module_table")),
                     tabPanel("Module Network and Drivers",
-                             fluidRow(column(forceNetworkOutput("network"),width=9), column(dataTableOutput("drivers"),width=11))),
-                    tabPanel("Annotation plots", sankeyNetworkOutput("barplots"))))
+                             fluidRow(
+                               column(networkD3::forceNetworkOutput("network"),width=9),
+                               column(DT::dataTableOutput("drivers"),width=11)))))
   )
 
   #source(paste0(appDir, '/ui.R'))

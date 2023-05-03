@@ -17,6 +17,9 @@
 #' @author AS
 #'
 #' @importFrom dendextend nnodes
+#' @import parallel
+#' @import foreach
+#' @importFrom doParallel registerDoParallel
 #'
 #' @export
 initialize_R <- function(data.matrix,
@@ -70,7 +73,13 @@ initialize_R <- function(data.matrix,
     R$clust_info$densities <- get_sig_child_density(R, phenotype, confounders)
 
     R$clust_info$mgm_capable <- (num_samples >= R$clust_info$Size) & (R$clust_info$densities >= 0.5) & (R$clust_info$Size>1)
-    R$graphs <- lapply(1:nnodes(R$HCL), function(i) get_edges_linear(i,R, phenotype, confounders))
+
+    if(cores > 1){
+      registerDoParallel(cores=cores)
+      R$graphs <- foreach(i=1:nnodes(R$HCL)) %dopar% {get_edges_linear(i, R, phenotype, confounders)}
+    }else{
+      R$graphs <- lapply(1:nnodes(R$HCL), function(i) get_edges_linear(i,R, phenotype, confounders))
+    }
 
   }else if(length(phenotype)==2){
     R$clust_info$pheno1_densities <- get_sig_child_density(R, phenotype[1], confounders)
@@ -79,7 +88,13 @@ initialize_R <- function(data.matrix,
     R$clust_info$pheno2_densities <- get_sig_child_density(R, phenotype[2], confounders)
     R$clust_info$pheno2_mgm_capable <- (num_samples >= R$clust_info$Size) & (R$clust_info$pheno2_densities >= 0.5) & (R$clust_info$Size>1)
 
-    R$graphs <- lapply(1:nnodes(R$HCL), function(i) get_edges_linear(i,R, phenotype, confounders))
+    if(cores > 1){
+      registerDoParallel(cores=cores)
+      R$graphs <- foreach(i=1:nnodes(R$HCL)) %dopar% {get_edges_linear(i, R, phenotype, confounders)}
+    }else{
+      R$graphs <- lapply(1:nnodes(R$HCL), function(i) get_edges_linear(i,R, phenotype, confounders))
+    }
+
 
   }else{
     stop("autofocus only supports viewing up to two phenotypes.")

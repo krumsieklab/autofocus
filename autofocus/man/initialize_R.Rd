@@ -14,17 +14,17 @@ initialize_R(
 )
 }
 \arguments{
-\item{data.matrix}{Matrix with samples as rows and biomolecules as columns}
+\item{data.matrix}{Matrix with samples as rows and biomolecules as columns.}
 
-\item{sample.data}{Matrix of annotation data of samples}
+\item{sample.data}{Matrix of annotation data of samples.}
 
-\item{mol.data}{Matrix of annotation data of biomolecules}
+\item{mol.data}{Matrix of annotation data of biomolecules.}
 
-\item{confounders}{Vector of names of potential confounders (names must be in sample.data)}
+\item{confounders}{Vector of names of potential confounders (names must be in sample.data).}
 
 \item{phenotype}{Name of column containing phenotype of interest, must be in sample.data.}
 
-\item{cores}{Number of cores to run on}
+\item{cores}{Number of cores to run on. Default: 4.}
 }
 \value{
 R struct with the data matrix, correlation matrix,
@@ -34,4 +34,7 @@ node order within the hierarchical structure and a color vector for the platform
 \description{
 Takes as input a data matrix, annotations on the samples and annotations on the molecules
 and creates a list structure, R with the hierarchical clustering structure and cluster informations.
+}
+\author{
+AS
 }
