@@ -29,6 +29,7 @@ run_autofocus <- function(R, anno_list = c("")){
                     tabPanel("Tree View",plotly::plotlyOutput("dendro")),
                     tabPanel("Peak List",DT::dataTableOutput("all_modules_table")),
                     tabPanel("Analyte List",DT::dataTableOutput("analyte_table")),
+                    tabPanel("Peak Annotations",reactable::reactableOutput("anno_table")),
                     sliderInput("threshold", "Density Threshold:", min=0, max=1, value=0.5)),
              tabBox(title = NULL,
                     width=12,

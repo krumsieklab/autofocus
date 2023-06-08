@@ -45,7 +45,7 @@ server <- function(input, output) {
   dendroProxy <- plotly::plotlyProxy("dendro")
 
   output$all_modules_table <- DT::renderDataTable({
-    peak_df <- R$clust_info[color_list$colors %in% c("#E7298A", "#A6D854", "#FC8D62"),] %>%
+    peak_df <- R$clust_info[(color_list$colors %in% c("#E7298A", "#A6D854", "#FC8D62")&R$clust_info$Size>1),] %>%
       dplyr::select(tidyselect::any_of(c("Size","pheno1_densities","pheno2_densities","densities")))
     DT::datatable(peak_df, selection="single")
   })
@@ -58,6 +58,41 @@ server <- function(input, output) {
 
   analyteProxy <- DT::dataTableProxy("analyte_table")
 
+  ### Peak Annoation Table ###
+  output$anno_table <- reactable::renderReactable({
+    anno_list <- colnames(R$annos)
+    peak_df <- R$clust_info[(color_list$colors %in% c("#E7298A", "#A6D854", "#FC8D62")&R$clust_info$Size>1),] %>%
+      dplyr::select(tidyselect::any_of(c("ClusterID","Size","pheno1_densities","pheno2_densities","densities")))
+    peak_df[colnames(R$annos)] <- peak_df$ClusterID
+
+    anno_df <<- lapply(1:nrow(peak_df), function(i){
+      annos <- R$annos[R$clusts[[peak_df$ClusterID[i]]],]
+      annos$cluster <- rep(peak_df$ClusterID[i], nrow(annos))
+      annos %>% data.frame() %>%
+        replace(is.na(.), "Missing information")
+    }) %>% dplyr::bind_rows()
+
+    cd_fun_list <- lapply(anno_list, function(x){templates::tmpl(autofocus:::pie_plot_tmpl_fun, anno = x)})
+    names_list <- lapply(anno_list, function(x){paste(x," Distribution")})
+    cd_list <- lapply(1:length(anno_list), function(x){reactable::colDef(name=names_list[[x]],
+                                                              cell=cd_fun_list[[x]])})
+
+    if("densities" %in% colnames(R$clust_info)){
+      columns_list <- list(reactable::colDef(maxWidth = 100),
+                           reactable::colDef(maxWidth = 100),
+                           reactable::colDef(maxWidth = 100))
+    }else{
+      columns_list <- list(reactable::colDef(maxWidth = 100),
+                           reactable::colDef(maxWidth = 100),
+                           reactable::colDef(maxWidth = 100),
+                           reactable::colDef(maxWidth = 100))
+    }
+
+    full_columns_list <- c(columns_list, cd_list)
+    names(full_columns_list) <- colnames(peak_df)
+
+    reactable::reactable(peak_df, columns = full_columns_list)
+  })
 
   output$single_module_table<-DT::renderDataTable({
     data.frame(R$annos[R$clusts[[selected_node$n]],])
@@ -66,23 +101,25 @@ server <- function(input, output) {
 
   ### Network/Driver section ###
   output$network <- networkD3::renderForceNetwork({
-    ColourScale_nodes <- paste0('d3.scaleOrdinal()
+    graph = R$graphs[[selected_node$n]]
+    if(length(graph)!=1){
+      ColourScale_nodes <- paste0('d3.scaleOrdinal()
                           .domain(["phenotype", "analyte","confounder"])
                           .range(["',paste(unlist(color_palette[c(1,3,9)]), collapse='","'),'"]);')
 
-    graph = R$graphs[[selected_node$n]]
-    d3net<- networkD3::igraph_to_networkD3(graph, group=igraph::V(graph)$NodeType)
-    drivers <- igraph::V(graph)$Driver
-    networkD3::forceNetwork(d3net$links,
-                 d3net$nodes,
-                 NodeID="name",
-                 Group="group",
-                 colourScale=networkD3::JS(ColourScale_nodes),
-                 linkColour = ifelse(rowSums(d3net$links==0), color_palette[4],color_palette[10]),
-                 zoom=T,
-                 opacity=1,
-                 legend=T,
-    )
+      d3net<- networkD3::igraph_to_networkD3(graph, group=igraph::V(graph)$NodeType)
+      drivers <- igraph::V(graph)$Driver
+      networkD3::forceNetwork(d3net$links,
+                              d3net$nodes,
+                              NodeID="name",
+                              Group="group",
+                              colourScale=networkD3::JS(ColourScale_nodes),
+                              linkColour = ifelse(rowSums(d3net$links==0), color_palette[4],color_palette[10]),
+                              zoom=T,
+                              opacity=1,
+                              legend=T,
+      )
+    }
   })
 
   output$drivers<-DT::renderDataTable(data.frame(R$annos)[rownames(R$annos)%in%autofocus:::get_drivers(R,selected_node$n),], caption="Driver information")
@@ -91,7 +128,7 @@ server <- function(input, output) {
   # Click on a peak in the peak list
   selected_node = shiny::reactiveValues(n = NA, last=NA)
   shiny::observeEvent(input$all_modules_table_row_last_clicked,{
-    dt <- R$clust_info[color_list$colors=="red",]
+    dt <- R$clust_info[color_list$colors=="#E7298A",]
     selected_node$last = selected_node$n
     selected_node$n = dt[input$all_modules_table_row_last_clicked,1]
     old_label <- if(is.na(selected_node$last)) "" else autofocus:::get_node_label(R,selected_node$last)
@@ -115,7 +152,7 @@ server <- function(input, output) {
   shiny::observeEvent(input$analyte_table_row_last_clicked,{
     analyte <- input$analyte_table_row_last_clicked
     ancestors <- autofocus:::get_ancestors(R, -1*analyte, c())
-    peak <- ancestors[which(color_list$colors[ancestors]=="red")]
+    peak <- ancestors[which(color_list$colors[ancestors]=="#E7298A")]
     if(length(peak)==0){
       shinyalert::shinyalert(
         title = "Insignificant", type = "warning",
@@ -163,7 +200,6 @@ server <- function(input, output) {
       selected_node$n = which(R$clust_info$Coord_Y ==round(d$y,digits=10))
       old_label <- if(is.na(selected_node$last)) "" else autofocus:::get_node_label(R,selected_node$last)
       new_label <- autofocus:::get_node_label(R, selected_node$n)
-      print(c(old_label,new_label))
       DT::selectRows(tableProxy, selected_node$n)
       view_range <- match(R$clusts[as.double(selected_node$n)][[1]], R$HCL$order)
       x_axis$range <- c((min(view_range)-1),(max(view_range)+1))

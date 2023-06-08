@@ -155,7 +155,6 @@ peak_finder_wrapper<-function (R, threshold){
 #'
 #' @noRd
 identify_peaks <- function(R, i, threshold, indices, dense_col="densities"){
-  if(i == 441) print("FOUND IT!!!")
   # Leaf Case
   if (i < 0) return(indices)
   else{
@@ -315,5 +314,65 @@ plot_dend<-function(R, sig_threshold){
 #' @noRd
 get_drivers<- function(R, i){
   g <- R$graphs[[i]]
+  if(length(g)==1) return(character(0))
   igraph::V(g)$name[igraph::V(g)$Driver]
+}
+
+#' Get pie plot colors
+#'
+#' Assign colors to each unique value of an annotation.
+#'
+#' @param anno_vec Vector of unique annotation values.
+#'
+#' @return List of unique annotation values with colors as names.
+#'
+#' @importFrom RColorBrewer brewer.pal
+#'
+#' @noRd
+get_pie_color <- function(anno_vec){
+
+  disc_palette <- c(brewer.pal(n=8, name= "Dark2"),
+                    brewer.pal(n=8, name= "Set2"),
+                    brewer.pal(n=8,name="Pastel2"),
+                    brewer.pal(n=12,name="Set3"),
+                    brewer.pal(n=12,name="Paired"))
+  if(length(anno_vec) > length(disc_palette)) stop("Too many unique values for annotations.")
+  color_vec <- anno_vec
+  names(color_vec) <- disc_palette[1:length(anno_vec)]
+
+  color_vec
+}
+
+#' Template pie plot function
+#'
+#' This is a template function called to dynamically define pie plot columns in the reactable
+#' table. The object 'anno' (surrounded by {{ }}) will be replaced with the annotation column name
+#' of interest using the function tmpl(). This function defintion is then provided to the function
+#' colDef() via the cell argument (see tmpl and colDef documentation for details).
+#'
+#' @param value The cell info object. See reactable::colDef for details.
+#'
+#' @return Function definition for the custum cell renderer. See reactable::colDef for details.
+#'
+#' @noRd
+pie_plot_tmpl_fun <- function(value){
+
+  pie_df <- anno_df %>%
+    filter(cluster == value) %>%
+    group_by(cluster, {{anno}}) %>%
+    summarise(n=n()) %>%
+    mutate(freq=n/sum(n))
+  anno_vec = pie_df %>% ungroup() %>% dplyr::select({{anno}}) %>% unlist()
+  color_vec = get_pie_color(anno_vec)
+  p <- plot_ly(pie_df,
+               labels = ~{{anno}},
+               values = ~freq,
+               type="pie",
+               hoverinfo='label',
+               marker=list(colors=names(names(color_vec)))) %>%
+    #marker=list(colors=names(color_vec[which(color_vec %in% unlist(dplyr::select(pie_df, SUPER_PATHWAY)))]))) %>%
+    layout()
+
+  return(p)
+
 }
