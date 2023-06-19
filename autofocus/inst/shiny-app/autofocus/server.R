@@ -69,8 +69,14 @@ server <- function(input, output) {
       annos <- R$annos[R$clusts[[peak_df$ClusterID[i]]],]
       annos$cluster <- rep(peak_df$ClusterID[i], nrow(annos))
       annos %>% data.frame() %>%
-        replace(is.na(.), "Missing information")
+        replace(is.na(.), "No Data")
     }) %>% dplyr::bind_rows()
+
+    pal_list = lapply(anno_list, function(x){
+      anno_vec = anno_df %>% ungroup() %>% dplyr::select(!!x) %>% unlist()
+      pal = autofocus:::get_pie_color(anno_vec)
+    })
+    names(pal_list) <- anno_list
 
     cd_fun_list <- lapply(anno_list, function(x){templates::tmpl(autofocus:::pie_plot_tmpl_fun, anno = x)})
     names_list <- lapply(anno_list, function(x){paste(x," Distribution")})
@@ -91,7 +97,10 @@ server <- function(input, output) {
     full_columns_list <- c(columns_list, cd_list)
     names(full_columns_list) <- colnames(peak_df)
 
-    reactable::reactable(peak_df, columns = full_columns_list)
+    reactable::reactable(peak_df,
+                         columns = full_columns_list,
+                         selection = "single",
+                         onClick = "select")
   })
 
   output$single_module_table<-DT::renderDataTable({
@@ -101,7 +110,11 @@ server <- function(input, output) {
 
   ### Network/Driver section ###
   output$network <- networkD3::renderForceNetwork({
-    graph = R$graphs[[selected_node$n]]
+    if(!is.na(selected_node$n)){
+      graph = R$graphs[[selected_node$n]]
+    }else{
+      graph = NA
+    }
     if(length(graph)!=1){
       ColourScale_nodes <- paste0('d3.scaleOrdinal()
                           .domain(["phenotype", "analyte","confounder"])
@@ -127,24 +140,26 @@ server <- function(input, output) {
 
   # Click on a peak in the peak list
   selected_node = shiny::reactiveValues(n = NA, last=NA)
-  shiny::observeEvent(input$all_modules_table_row_last_clicked,{
-    dt <- R$clust_info[color_list$colors=="#E7298A",]
-    selected_node$last = selected_node$n
-    selected_node$n = dt[input$all_modules_table_row_last_clicked,1]
-    old_label <- if(is.na(selected_node$last)) "" else autofocus:::get_node_label(R,selected_node$last)
-    new_label <- autofocus:::get_node_label(R, selected_node$n)
-    view_range <- match(R$clusts[as.double(selected_node$n)][[1]], R$HCL$order)
-    x_axis$range <- c((min(view_range)-1),(max(view_range)+1))
-    y <- R$clust_info[selected_node$n,]$Coord_Y
-    y_axis$range <- c(-(y*0.1), y+(y*0.1))
-    plotly::plotlyProxyInvoke(dendroProxy, "relayout", list(xaxis=x_axis, yaxis=y_axis)) %>%
-      plotly::plotlyProxyInvoke("addTraces", list(x=c(R$clust_info[selected_node$last,]$Coord_X, R$clust_info[selected_node$n,]$Coord_X),
-                                          y=c(R$clust_info[selected_node$last,]$Coord_Y, R$clust_info[selected_node$n,]$Coord_Y),
-                                          type="scatter",
-                                          mode="markers",
-                                          text = c(old_label,new_label),
-                                          marker = list(color=c(color_list$colors[selected_node$last],"yellow"), size = 9)))
-
+  shiny::observeEvent(reactable::getReactableState("anno_table"),{
+    selected_row = reactable::getReactableState("anno_table")$selected
+    if(!is.null(selected_row)){
+      dt <- R$clust_info[color_list$colors %in% c("#E7298A", "#A6D854", "#FC8D62"),]
+      selected_node$last = selected_node$n
+      selected_node$n = dt[selected_row,1]
+      old_label <- if(is.na(selected_node$last)) "" else autofocus:::get_node_label(R,selected_node$last)
+      new_label <- autofocus:::get_node_label(R, selected_node$n)
+      view_range <- match(R$clusts[as.double(selected_node$n)][[1]], R$HCL$order)
+      x_axis$range <- c((min(view_range)-1),(max(view_range)+1))
+      y <- R$clust_info[selected_node$n,]$Coord_Y
+      y_axis$range <- c(-(y*0.1), y+(y*0.1))
+      plotly::plotlyProxyInvoke(dendroProxy, "relayout", list(xaxis=x_axis, yaxis=y_axis)) %>%
+        plotly::plotlyProxyInvoke("addTraces", list(x=c(R$clust_info[selected_node$last,]$Coord_X, R$clust_info[selected_node$n,]$Coord_X),
+                                                    y=c(R$clust_info[selected_node$last,]$Coord_Y, R$clust_info[selected_node$n,]$Coord_Y),
+                                                    type="scatter",
+                                                    mode="markers",
+                                                    text = c(old_label,new_label),
+                                                    marker = list(color=c(color_list$colors[selected_node$last],"yellow"), size = 9)))
+    }
   })
 
   # Click on an analyte in the analyte list
@@ -152,7 +167,7 @@ server <- function(input, output) {
   shiny::observeEvent(input$analyte_table_row_last_clicked,{
     analyte <- input$analyte_table_row_last_clicked
     ancestors <- autofocus:::get_ancestors(R, -1*analyte, c())
-    peak <- ancestors[which(color_list$colors[ancestors]=="#E7298A")]
+    peak <- ancestors[which(color_list$colors[ancestors] %in% c("#E7298A", "#A6D854", "#FC8D62"))]
     if(length(peak)==0){
       shinyalert::shinyalert(
         title = "Insignificant", type = "warning",

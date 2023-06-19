@@ -331,16 +331,24 @@ get_drivers<- function(R, i){
 #' @noRd
 get_pie_color <- function(anno_vec){
 
-  disc_palette <- c(brewer.pal(n=8, name= "Dark2"),
-                    brewer.pal(n=8, name= "Set2"),
-                    brewer.pal(n=8,name="Pastel2"),
-                    brewer.pal(n=12,name="Set3"),
-                    brewer.pal(n=12,name="Paired"))
-  if(length(anno_vec) > length(disc_palette)) stop("Too many unique values for annotations.")
-  color_vec <- anno_vec
-  names(color_vec) <- disc_palette[1:length(anno_vec)]
+  palette <- unique(c(brewer.pal(n = 12,name="Set3"),
+                      brewer.pal(n = 9,name="Set1"),
+                      brewer.pal(n = 8,name="Set2"),
+                      brewer.pal(n = 9,name="Pastel1"),
+                      brewer.pal(n = 8,name="Pastel2"),
+                      brewer.pal(n = 12,name="Paired"),
+                      brewer.pal(n = 8,name="Dark2")))
+  palette <- sample(palette)
 
-  color_vec
+  if(length(anno_vec) > length(palette)) stop("Too many unique values for annotation plot.")
+
+  anno_vals <- unique(anno_vec)
+  anno_vals <- anno_vals[anno_vals != "No Data"]
+  pal <- as.list(c("gray", palette[1:length(anno_vals)]))
+  anno_vals <- c("No Data", anno_vals)
+  names(pal) <- anno_vals
+
+  as.list(pal)
 }
 
 #' Template pie plot function
@@ -361,15 +369,19 @@ pie_plot_tmpl_fun <- function(value){
     filter(cluster == value) %>%
     group_by(cluster, {{anno}}) %>%
     summarise(n=n()) %>%
-    mutate(freq=n/sum(n))
-  anno_vec = pie_df %>% ungroup() %>% dplyr::select({{anno}}) %>% unlist()
-  color_vec = get_pie_color(anno_vec)
+    mutate(freq=n/sum(n)) %>%
+    ungroup()
+  pal <- pal_list %>% extract2("{{anno}}")
+  pie_df$colors <- unname(pal[match(unlist(dplyr::select(pie_df, {{anno}})),names(pal))])
+  #color_vec <- pal[match(unlist(dplyr::select(pie_df, {{anno}})),names(pal))]
   p <- plot_ly(pie_df,
                labels = ~{{anno}},
                values = ~freq,
                type="pie",
                hoverinfo='label',
-               marker=list(colors=names(names(color_vec)))) %>%
+               marker=list(colors = ~colors),
+               rotation=300,
+               textfont = list(size = 20,color="black")) %>%
     #marker=list(colors=names(color_vec[which(color_vec %in% unlist(dplyr::select(pie_df, SUPER_PATHWAY)))]))) %>%
     layout()
 
