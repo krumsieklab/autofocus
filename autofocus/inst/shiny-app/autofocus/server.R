@@ -44,14 +44,6 @@ server <- function(input, output) {
 
   dendroProxy <- plotly::plotlyProxy("dendro")
 
-  output$all_modules_table <- DT::renderDataTable({
-    peak_df <- R$clust_info[(color_list$colors %in% c("#E7298A", "#A6D854", "#FC8D62")&R$clust_info$Size>1),] %>%
-      dplyr::select(tidyselect::any_of(c("Size","pheno1_densities","pheno2_densities","densities")))
-    DT::datatable(peak_df, selection="single")
-  })
-
-  tableProxy <- DT::dataTableProxy("all_modules_table")
-
   output$analyte_table <- DT::renderDataTable(
     data.frame(R$annos),selection="single"
   )
@@ -59,7 +51,7 @@ server <- function(input, output) {
   analyteProxy <- DT::dataTableProxy("analyte_table")
 
   ### Peak Annoation Table ###
-  output$anno_table <- reactable::renderReactable({
+  output$peak_table <- reactable::renderReactable({
     anno_list <- colnames(R$annos)
     peak_df <- R$clust_info[(color_list$colors %in% c("#E7298A", "#A6D854", "#FC8D62")&R$clust_info$Size>1),] %>%
       dplyr::select(tidyselect::any_of(c("ClusterID","Size","pheno1_densities","pheno2_densities","densities")))
@@ -140,8 +132,8 @@ server <- function(input, output) {
 
   # Click on a peak in the peak list
   selected_node = shiny::reactiveValues(n = NA, last=NA)
-  shiny::observeEvent(reactable::getReactableState("anno_table"),{
-    selected_row = reactable::getReactableState("anno_table")$selected
+  shiny::observeEvent(reactable::getReactableState("peak_table"),{
+    selected_row = reactable::getReactableState("peak_table")$selected
     if(!is.null(selected_row)){
       dt <- R$clust_info[color_list$colors %in% c("#E7298A", "#A6D854", "#FC8D62"),]
       selected_node$last = selected_node$n
