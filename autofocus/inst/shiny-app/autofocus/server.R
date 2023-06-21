@@ -72,11 +72,11 @@ server <- function(input, output) {
         replace(is.na(.), "No Data")
     }) %>% dplyr::bind_rows()
 
-    pal_list = lapply(anno_list, function(x){
+    pal_list <<- lapply(anno_list, function(x){
       anno_vec = anno_df %>% ungroup() %>% dplyr::select(!!x) %>% unlist()
       pal = autofocus:::get_pie_color(anno_vec)
     })
-    names(pal_list) <- anno_list
+    names(pal_list) <<- anno_list
 
     cd_fun_list <- lapply(anno_list, function(x){templates::tmpl(autofocus:::pie_plot_tmpl_fun, anno = x)})
     names_list <- lapply(anno_list, function(x){paste(x," Distribution")})
