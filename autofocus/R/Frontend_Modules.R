@@ -340,9 +340,9 @@ get_pie_color <- function(anno_vec){
                       brewer.pal(n = 8,name="Dark2")))
   palette <- sample(palette)
 
-  if(length(anno_vec) > length(palette)) stop("Too many unique values for annotation plot.")
-
   anno_vals <- unique(anno_vec)
+  if(length(anno_vals) > length(palette)) stop("Too many unique values for annotation plot.")
+
   anno_vals <- anno_vals[anno_vals != "No Data"]
   pal <- as.list(c("gray", palette[1:length(anno_vals)]))
   anno_vals <- c("No Data", anno_vals)
