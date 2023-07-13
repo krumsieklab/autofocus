@@ -160,43 +160,39 @@ server <- function(input, output) {
     analyte <- input$analyte_table_row_last_clicked
     ancestors <- autofocus:::get_ancestors(R, -1*analyte, c())
     peak <- ancestors[which(color_list$colors[ancestors] %in% c("#E7298A", "#A6D854", "#FC8D62"))]
+    selected_node$last = selected_node$n
     if(length(peak)==0){
-      shinyalert::shinyalert(
-        title = "Insignificant", type = "warning",
-        text="This analyte does not belong to a significant module, please choose another"
-      )
+      selected_node$n = ancestors[2]
+    }else{
+      selected_node$n = peak
     }
-    else{
-      selected_analyte$last = selected_analyte$n
-      selected_analyte$n = input$analyte_table_row_last_clicked+dim(R$HCL$merge)[1]
-      old_analyte_label <- if(is.na(selected_analyte$last)) "" else autofocus:::get_node_label(R,selected_analyte$last)
-      new_analyte_label <- autofocus:::get_node_label(R, selected_analyte$n)
-      selected_node$last = selected_node$n
-      selected_node$n=peak
-      old_label <- if(is.na(selected_node$last)) "" else autofocus:::get_node_label(R,selected_node$last)
-      new_label <- autofocus:::get_node_label(R, selected_node$n)
-      view_range <- match(R$clusts[as.double(selected_node$n)][[1]], R$HCL$order)
-      x_axis$range <- c((min(view_range)-1),(max(view_range)+1))
-      y <- R$clust_info[selected_node$n,]$Coord_Y
-      y_axis$range <- c(-(y*0.1), y+(y*0.1))
-      plotly::plotlyProxyInvoke(dendroProxy, "relayout", list(xaxis=x_axis, yaxis=y_axis)) %>%
-        plotly::plotlyProxyInvoke("addTraces", list(x=c(R$clust_info[selected_node$last,]$Coord_X,
-                                                R$clust_info[selected_node$n,]$Coord_X,
-                                                R$clust_info[selected_analyte$last,]$Coord_X,
-                                                R$clust_info[selected_analyte$n,]$Coord_X),
-                                            y=c(R$clust_info[selected_node$last,]$Coord_Y,
-                                                R$clust_info[selected_node$n,]$Coord_Y,
-                                                R$clust_info[selected_analyte$last,]$Coord_Y,
-                                                R$clust_info[selected_analyte$n,]$Coord_Y),
-                                            type="scatter",
-                                            mode="markers",
-                                            text = c(old_label,new_label, old_analyte_label, new_analyte_label),
-                                            marker = list(color=c(color_list$colors[selected_node$last],
-                                                                  "yellow",
-                                                                  color_list$colors[selected_analyte$last],
-                                                                  "blue"))))
 
-    }
+    selected_analyte$last = selected_analyte$n
+    selected_analyte$n = input$analyte_table_row_last_clicked+dim(R$HCL$merge)[1]
+    old_analyte_label <- if(is.na(selected_analyte$last)) "" else autofocus:::get_node_label(R,selected_analyte$last)
+    new_analyte_label <- autofocus:::get_node_label(R, selected_analyte$n)
+    old_label <- if(is.na(selected_node$last)) "" else autofocus:::get_node_label(R,selected_node$last)
+    new_label <- autofocus:::get_node_label(R, selected_node$n)
+    view_range <- match(R$clusts[as.double(selected_node$n)][[1]], R$HCL$order)
+    x_axis$range <- c((min(view_range)-1),(max(view_range)+1))
+    y <- R$clust_info[selected_node$n,]$Coord_Y
+    y_axis$range <- c(-(y*0.1), y+(y*0.1))
+    plotly::plotlyProxyInvoke(dendroProxy, "relayout", list(xaxis=x_axis, yaxis=y_axis)) %>%
+      plotly::plotlyProxyInvoke("addTraces", list(x=c(R$clust_info[selected_node$last,]$Coord_X,
+                                                      R$clust_info[selected_node$n,]$Coord_X,
+                                                      R$clust_info[selected_analyte$last,]$Coord_X,
+                                                      R$clust_info[selected_analyte$n,]$Coord_X),
+                                                  y=c(R$clust_info[selected_node$last,]$Coord_Y,
+                                                      R$clust_info[selected_node$n,]$Coord_Y,
+                                                      R$clust_info[selected_analyte$last,]$Coord_Y,
+                                                      R$clust_info[selected_analyte$n,]$Coord_Y),
+                                                  type="scatter",
+                                                  mode="markers",
+                                                  text = c(old_label, new_label, old_analyte_label, new_analyte_label),
+                                                  marker = list(color=c(color_list$colors[selected_node$last],
+                                                                        "yellow",
+                                                                        color_list$colors[selected_analyte$last],
+                                                                        "blue"))))
   })
 
   # Click on a node in the dendrogram
@@ -207,7 +203,7 @@ server <- function(input, output) {
       selected_node$n = which(R$clust_info$Coord_Y ==round(d$y,digits=10))
       old_label <- if(is.na(selected_node$last)) "" else autofocus:::get_node_label(R,selected_node$last)
       new_label <- autofocus:::get_node_label(R, selected_node$n)
-      DT::selectRows(tableProxy, selected_node$n)
+      #DT::selectRows(tableProxy, selected_node$n)
       view_range <- match(R$clusts[as.double(selected_node$n)][[1]], R$HCL$order)
       x_axis$range <- c((min(view_range)-1),(max(view_range)+1))
       y <- R$clust_info[selected_node$n,]$Coord_Y
