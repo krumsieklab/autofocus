@@ -158,7 +158,7 @@ identify_peaks <- function(R, i, threshold, indices, dense_col="densities"){
   # Leaf Case
   if (i < 0) return(indices)
   else{
-    if (R$clust_info[[dense_col]][i] > threshold){
+    if (R$clust_info[[dense_col]][i] >= threshold){
       return(c(indices, i))
     }
     else{
