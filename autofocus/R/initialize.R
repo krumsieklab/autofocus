@@ -9,6 +9,8 @@
 #' @param confounders Vector of names of potential confounders (names must be in sample.data).
 #' @param phenotype Name of column containing phenotype of interest, must be in sample.data.
 #' @param cores Number of cores to run on. Default: 4.
+#' @param use_wgcna Whether or not to use WGNA for hiearchical clustering. Default: F.
+#' @param adj_method Which p-value adjustment method to use. One of c("bonferroni", "fdr").
 #'
 #' @return R struct with the data matrix, correlation matrix,
 #' sample and molecular annotations, hierarchical structure, cluster membership
@@ -27,18 +29,64 @@ initialize_R <- function(data.matrix,
                          mol.data,
                          confounders,
                          phenotype,
-                         cores = 4
+                         cores = 4,
+                         use_wgcna = F,
+                         adj_method = c("bonferroni", "fdr")
 ){
+
+  adj_method = match.arg(adj_method)
+
+  # check that data.matrix is input the correct way (samples in rows and features in columns)
+  # crash if not
+  df_rows <- nrow(data.matrix)
+  df_cols <- ncol(data.matrix)
+  nsamp <- nrow(sample.data)
+  nmol <- nrow(mol.data)
+  # check that number of rows in data.matrix is equal to number of rows in sample.data
+  if(df_rows != nsamp){
+    if(df_rows == nmol){
+      stop("Number of rows of sample.data do not match number of data.matrix rows. Did you forget
+      to transpose SE assay?")
+    }else{
+      stop("Number of rows of data.matrix (samples) do not match rows in sample.matrix.")
+    }
+  }
+  # check that number of columns in data.matrix is equal to number of rows in mol.data
+  if(df_cols != nmol){
+    if(df_cols == nsamp){
+      stop("Number of rows of mol.data do not match number of data.matrix columns. Did you forget
+      to transpose SE assay?")
+    }else{
+      stop("Number of columns of data.matrix (features) do not match rows in mol.matrix.")
+    }
+  }
 
   # Organize input data
   R <- list(data = scale(data.matrix), samples = sample.data, annos = mol.data)
 
-  # Calculate correlations between biomolecules
-  R$C <- stats::cor(data.matrix, use="pairwise.complete.obs")
+  # run WGCNA?
+  if(use_wgcna){
+    dissTom <- get_wgcna_dist_metric(data.matrix, cores)
+    R$HCL <- hclust(as.dist(dissTom),method="average")
+  }else{
+    # Calculate correlations between biomolecules
+    R$C <- stats::cor(data.matrix, use="pairwise.complete.obs")
 
-  # Calculate hierarchical structure, order of nodes
-  R$HCL <- R %>% get_dendro(method = "average", cores)
-  R$dend_data <- ggdendro::dendro_data(as.dendrogram(R$HCL), type = "rectangle")
+    # Calculate hierarchical structure, order of nodes
+    R$HCL <- R %>% get_dendro(method = "average", cores)
+  }
+
+  R$dend_data <- try(ggdendro::dendro_data(as.dendrogram(R$HCL), type = "rectangle"), silent = T)
+  if(class(R$dend_data)=="try-error"){
+    if(R$dend_data == "Error : node stack overflow\n"){
+      warning("Hierarchical tree exceeds maximum recursion depth and cannot be drawn with the
+              ggdendro::dendro_data function. This will affect visualization of the dendrogram
+              in the autofocus shiny app.")
+    }else{
+      stop(glue::glue("The following error was encountered running ggdendro::dendro_data:\n", R$dend_data))
+    }
+  }
+
   R$order <- get_dend_indices(R, dim(R$HCL$merge)[1], c())
 
   # Get all clusters in the hierarchical tree
@@ -70,7 +118,7 @@ initialize_R <- function(data.matrix,
                              Size = c(mapply(function(i)length(i),R$clusts),rep(1, dendextend::nleaves(R$HCL))))
 
   if(length(phenotype)==1){
-    R$clust_info$densities <- get_sig_child_density(R, phenotype, confounders)
+    R$clust_info$densities <- get_sig_child_density(R, phenotype, confounders, method=adj_method)
 
     R$clust_info$mgm_capable <- (num_samples >= R$clust_info$Size) & (R$clust_info$densities >= 0.5) & (R$clust_info$Size>1)
 
@@ -82,10 +130,10 @@ initialize_R <- function(data.matrix,
     }
 
   }else if(length(phenotype)==2){
-    R$clust_info$pheno1_densities <- get_sig_child_density(R, phenotype[1], confounders)
+    R$clust_info$pheno1_densities <- get_sig_child_density(R, phenotype[1], confounders, method=adj_method)
     R$clust_info$pheno1_mgm_capable <- (num_samples >= R$clust_info$Size) & (R$clust_info$pheno1_densities >= 0.5) & (R$clust_info$Size>1)
 
-    R$clust_info$pheno2_densities <- get_sig_child_density(R, phenotype[2], confounders)
+    R$clust_info$pheno2_densities <- get_sig_child_density(R, phenotype[2], confounders, method=adj_method)
     R$clust_info$pheno2_mgm_capable <- (num_samples >= R$clust_info$Size) & (R$clust_info$pheno2_densities >= 0.5) & (R$clust_info$Size>1)
 
     if(cores > 1){

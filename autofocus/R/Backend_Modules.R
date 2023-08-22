@@ -130,6 +130,7 @@ get_parent <- function(
 #'
 #' @noRd
 get_sig_child_density <- function(R, phenotype, confounders, method="fdr"){
+  print(method)
   sig_kids<-lapply(1:dendextend::nleaves(R$HCL), function(i) {
     data <- data.frame(pheno=R$samples[[phenotype]], molecule = R$data[,i], R$samples[,confounders])
     reg <- lm(pheno ~ ., data = data)
@@ -314,5 +315,92 @@ get_variable_type <- function(variable_vec, cutoff= 0.05){
 #' @noRd
 get_num_categories <- function(variable_vec, cutoff=0.05){
   ifelse((length(unique(variable_vec))/length(variable_vec)) <= 0.05, length(unique(variable_vec)), 1)
+
+}
+
+#' Use WGCNA to get adjacency matrix
+#'
+#' Helper function called by get_denro that creates an adjacency matrix. The matrix is created
+#' using the saved Topological Overlap Matrices (TOMs) saved by the WGCNA function
+#' blockwiseModules.
+#'
+#' @param input_mat R Data matrix with samples in rows and features in columns.
+#' @param cores Number of cores to be used in this step.
+#'
+#' @return NULL (save TOM file to working directory)
+#'
+#' @import WGCNA
+#'
+#' @noRd
+run_wgcna <- function(input_mat,
+                      cores
+){
+  allowWGCNAThreads(nThreads = cores)
+
+  # Choose a set of soft-thresholding powers
+  powers = c(c(1:10), seq(from = 12, to = 20, by = 2))
+
+  # Call the network topology analysis function
+  sft = WGCNA::pickSoftThreshold(
+    input_mat,
+    powerVector = powers,
+    verbose = 5
+  )
+
+  # Select the power with the best fit
+  signed_r2 = -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2]
+  select_power = which(signed_r2 == max(signed_r2))
+
+  # module detection (use WGCNA cor implementation for this step)
+  cor <- WGCNA::cor
+  netwk <- WGCNA::blockwiseModules(input_mat,                # <= input here
+                            # == Adjacency Function ==
+                            power = select_power, # <= power here
+                            blocks = rep(1, ncol(input_mat)),
+
+                            # == Tree and Block Options ==
+                            minModuleSize = 2,
+                            saveTOMs = T,
+
+                            # == Output Options
+                            numericLabels = T,
+                            verbose = 3)
+  cor <- stats::cor
+
+  # the above WGCNA function saves the TOM file to the local directory
+  # so nothing is returned from this function
+  return(NULL)
+}
+
+#' Get WGCNA TOM-Based Distance Metric
+#'
+#' Calculate the WGCNA Distance Metric equal to one minus the topological overlap matrix. Calls
+#' helper function run_wgcna. See \code{\link[WGCNA]{blockwiseModules}} for details.
+#'
+#' @param input_matrix R Data matrix with samples in rows and features in columns.
+#' @param cores Number of cores to be used in this step.
+#'
+#' @return TOM-Based Distance Metric
+#'
+#' @noRd
+get_wgcna_dist_metric <- function(input_matrix, cores){
+
+  # calculate TOM
+  run_wgcna(input_matrix, cores)
+
+  # load TOM file and calculate distance metric
+  tom_file <- "blockwiseTOM-block.1.RData"
+  load(tom_file)
+  tom = as.matrix(TOM)
+  rm(TOM)
+  WGCNA::collectGarbage()
+  dissTom = 1 - tom
+
+  # clean up and remove temporary TOM file
+  rm(tom)
+  WGCNA::collectGarbage()
+  file.remove(tom_file)
+
+  return(dissTom)
 
 }

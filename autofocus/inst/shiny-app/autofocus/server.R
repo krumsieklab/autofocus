@@ -31,15 +31,17 @@ server <- function(input, output) {
 
   output$dendro <- plotly::renderPlotly({
 
-    ### Dendrogram ###
-    dend_network<-plotly::layout(
-      autofocus:::plot_dend(R, input$threshold),
-      xaxis = x_axis,
-      yaxis = y_axis,
-      showlegend = F
-    )
-    dend_network$source = "A"
-    dend_network
+    if(class(R$dend_data) != "try-error"){
+      ### Dendrogram ###
+      dend_network<-plotly::layout(
+        autofocus:::plot_dend(R, input$threshold),
+        xaxis = x_axis,
+        yaxis = y_axis,
+        showlegend = F
+      )
+      dend_network$source = "A"
+      dend_network
+    }
   })
 
   dendroProxy <- plotly::plotlyProxy("dendro")
@@ -144,13 +146,15 @@ server <- function(input, output) {
       x_axis$range <- c((min(view_range)-1),(max(view_range)+1))
       y <- R$clust_info[selected_node$n,]$Coord_Y
       y_axis$range <- c(-(y*0.1), y+(y*0.1))
-      plotly::plotlyProxyInvoke(dendroProxy, "relayout", list(xaxis=x_axis, yaxis=y_axis)) %>%
-        plotly::plotlyProxyInvoke("addTraces", list(x=c(R$clust_info[selected_node$last,]$Coord_X, R$clust_info[selected_node$n,]$Coord_X),
-                                                    y=c(R$clust_info[selected_node$last,]$Coord_Y, R$clust_info[selected_node$n,]$Coord_Y),
-                                                    type="scatter",
-                                                    mode="markers",
-                                                    text = c(old_label,new_label),
-                                                    marker = list(color=c(color_list$colors[selected_node$last],"yellow"), size = 9)))
+      if(class(R$dend_data) != "try-error"){
+        plotly::plotlyProxyInvoke(dendroProxy, "relayout", list(xaxis=x_axis, yaxis=y_axis)) %>%
+          plotly::plotlyProxyInvoke("addTraces", list(x=c(R$clust_info[selected_node$last,]$Coord_X, R$clust_info[selected_node$n,]$Coord_X),
+                                                      y=c(R$clust_info[selected_node$last,]$Coord_Y, R$clust_info[selected_node$n,]$Coord_Y),
+                                                      type="scatter",
+                                                      mode="markers",
+                                                      text = c(old_label,new_label),
+                                                      marker = list(color=c(color_list$colors[selected_node$last],"yellow"), size = 9)))
+      }
     }
   })
 
@@ -177,22 +181,24 @@ server <- function(input, output) {
     x_axis$range <- c((min(view_range)-1),(max(view_range)+1))
     y <- R$clust_info[selected_node$n,]$Coord_Y
     y_axis$range <- c(-(y*0.1), y+(y*0.1))
-    plotly::plotlyProxyInvoke(dendroProxy, "relayout", list(xaxis=x_axis, yaxis=y_axis)) %>%
-      plotly::plotlyProxyInvoke("addTraces", list(x=c(R$clust_info[selected_node$last,]$Coord_X,
-                                                      R$clust_info[selected_node$n,]$Coord_X,
-                                                      R$clust_info[selected_analyte$last,]$Coord_X,
-                                                      R$clust_info[selected_analyte$n,]$Coord_X),
-                                                  y=c(R$clust_info[selected_node$last,]$Coord_Y,
-                                                      R$clust_info[selected_node$n,]$Coord_Y,
-                                                      R$clust_info[selected_analyte$last,]$Coord_Y,
-                                                      R$clust_info[selected_analyte$n,]$Coord_Y),
-                                                  type="scatter",
-                                                  mode="markers",
-                                                  text = c(old_label, new_label, old_analyte_label, new_analyte_label),
-                                                  marker = list(color=c(color_list$colors[selected_node$last],
-                                                                        "yellow",
-                                                                        color_list$colors[selected_analyte$last],
-                                                                        "blue"))))
+    if(class(R$dend_data) != "try-error"){
+      plotly::plotlyProxyInvoke(dendroProxy, "relayout", list(xaxis=x_axis, yaxis=y_axis)) %>%
+        plotly::plotlyProxyInvoke("addTraces", list(x=c(R$clust_info[selected_node$last,]$Coord_X,
+                                                        R$clust_info[selected_node$n,]$Coord_X,
+                                                        R$clust_info[selected_analyte$last,]$Coord_X,
+                                                        R$clust_info[selected_analyte$n,]$Coord_X),
+                                                    y=c(R$clust_info[selected_node$last,]$Coord_Y,
+                                                        R$clust_info[selected_node$n,]$Coord_Y,
+                                                        R$clust_info[selected_analyte$last,]$Coord_Y,
+                                                        R$clust_info[selected_analyte$n,]$Coord_Y),
+                                                    type="scatter",
+                                                    mode="markers",
+                                                    text = c(old_label, new_label, old_analyte_label, new_analyte_label),
+                                                    marker = list(color=c(color_list$colors[selected_node$last],
+                                                                          "yellow",
+                                                                          color_list$colors[selected_analyte$last],
+                                                                          "blue"))))
+    }
   })
 
   # Click on a node in the dendrogram
@@ -208,14 +214,15 @@ server <- function(input, output) {
       x_axis$range <- c((min(view_range)-1),(max(view_range)+1))
       y <- R$clust_info[selected_node$n,]$Coord_Y
       y_axis$range <- c(-(y*0.1), y+(y*0.1))
-      plotly::plotlyProxyInvoke(dendroProxy, "relayout", list(xaxis=x_axis, yaxis=y_axis)) %>%
-        plotly::plotlyProxyInvoke("addTraces", list(x=c(R$clust_info[selected_node$last,]$Coord_X, R$clust_info[selected_node$n,]$Coord_X),
-                                            y=c(R$clust_info[selected_node$last,]$Coord_Y, R$clust_info[selected_node$n,]$Coord_Y),
-                                            type="scatter",
-                                            mode="markers",
-                                            text = c(old_label, new_label),
-                                            marker = list(color=c(color_list$colors[selected_node$last],"yellow"))))
-
+      if(class(R$dend_data) != "try-error"){
+        plotly::plotlyProxyInvoke(dendroProxy, "relayout", list(xaxis=x_axis, yaxis=y_axis)) %>%
+          plotly::plotlyProxyInvoke("addTraces", list(x=c(R$clust_info[selected_node$last,]$Coord_X, R$clust_info[selected_node$n,]$Coord_X),
+                                                      y=c(R$clust_info[selected_node$last,]$Coord_Y, R$clust_info[selected_node$n,]$Coord_Y),
+                                                      type="scatter",
+                                                      mode="markers",
+                                                      text = c(old_label, new_label),
+                                                      marker = list(color=c(color_list$colors[selected_node$last],"yellow"))))
+      }
     }
   })
 

@@ -10,7 +10,9 @@ initialize_R(
   mol.data,
   confounders,
   phenotype,
-  cores = 4
+  cores = 4,
+  use_wgcna = F,
+  adj_method = c("bonferroni", "fdr")
 )
 }
 \arguments{
@@ -25,6 +27,10 @@ initialize_R(
 \item{phenotype}{Name of column containing phenotype of interest, must be in sample.data.}
 
 \item{cores}{Number of cores to run on. Default: 4.}
+
+\item{use_wgcna}{Whether or not to use WGNA for hiearchical clustering. Default: F.}
+
+\item{adj_method}{Which p-value adjustment method to use. One of c("bonferroni", "fdr").}
 }
 \value{
 R struct with the data matrix, correlation matrix,

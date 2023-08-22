@@ -21,6 +21,7 @@ run_autofocus <- function(R, anno_list = c("")){
 
   if(appDir == "") stop("Shiny app directory not found. Try re-installing autofocus package.")
 
+  R <<- R
   R$annos <<- R$annos[anno_list]
   color_palette<<- MetBrewer::met.brewer("Hiroshige",10)
   body <- shinydashboard::dashboardBody(
