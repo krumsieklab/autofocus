@@ -11,6 +11,7 @@
 #' @param cores Number of cores to run on. Default: 4.
 #' @param use_wgcna Whether or not to use WGNA for hiearchical clustering. Default: F.
 #' @param adj_method Which p-value adjustment method to use. One of c("bonferroni", "fdr").
+#' @param corr_method Which correlation method to use. One of c("pearson", "spearman")
 #'
 #' @return R struct with the data matrix, correlation matrix,
 #' sample and molecular annotations, hierarchical structure, cluster membership
@@ -31,7 +32,8 @@ initialize_R <- function(data.matrix,
                          phenotype,
                          cores = 4,
                          use_wgcna = F,
-                         adj_method = c("bonferroni", "fdr")
+                         adj_method = c("bonferroni", "fdr"),
+                         corr_method = c("pearson", "spearman")
 ){
 
   adj_method = match.arg(adj_method)
@@ -70,7 +72,7 @@ initialize_R <- function(data.matrix,
     R$HCL <- hclust(as.dist(dissTom),method="average")
   }else{
     # Calculate correlations between biomolecules
-    R$C <- stats::cor(data.matrix, use="pairwise.complete.obs")
+    R$C <- stats::cor(data.matrix, use="pairwise.complete.obs", method = corr_method)
 
     # Calculate hierarchical structure, order of nodes
     R$HCL <- R %>% get_dendro(method = "average", cores)
@@ -123,7 +125,7 @@ initialize_R <- function(data.matrix,
     R$clust_info$mgm_capable <- (num_samples >= R$clust_info$Size) & (R$clust_info$densities >= 0.5) & (R$clust_info$Size>1)
 
     if(cores > 1){
-      registerDoParallel(cores=cores)
+      doParallel::registerDoParallel(cores=cores)
       R$graphs <- foreach(i=1:nnodes(R$HCL)) %dopar% {get_edges_linear(i, R, phenotype, confounders)}
     }else{
       R$graphs <- lapply(1:nnodes(R$HCL), function(i) get_edges_linear(i,R, phenotype, confounders))
@@ -137,7 +139,7 @@ initialize_R <- function(data.matrix,
     R$clust_info$pheno2_mgm_capable <- (num_samples >= R$clust_info$Size) & (R$clust_info$pheno2_densities >= 0.5) & (R$clust_info$Size>1)
 
     if(cores > 1){
-      registerDoParallel(cores=cores)
+      doParallel::registerDoParallel(cores=cores)
       R$graphs <- foreach(i=1:nnodes(R$HCL)) %dopar% {get_edges_linear(i, R, phenotype, confounders)}
     }else{
       R$graphs <- lapply(1:nnodes(R$HCL), function(i) get_edges_linear(i,R, phenotype, confounders))

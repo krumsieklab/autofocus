@@ -15,7 +15,7 @@
 #' @export
 run_autofocus <- function(R, anno_list = c("")){
 
-  # move the anno_list argument to the intialize functino
+  # move the anno_list argument to the initialize function
 
   appDir <<- system.file("shiny-app", "autofocus", package = "autofocus")
 
