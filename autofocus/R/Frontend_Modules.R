@@ -190,7 +190,7 @@ filter_peaks <- function(R, peak_list, threshold, dense_col = "densities"){
 
       num_sig_questionable <- R$clust_info[[dense_col]][questionable_kid] * R$clust_info$Size[questionable_kid]
       if (num_sig_questionable ==0){
-        return(pride)
+        return(R$HCL$merge[i,])
       }
 
       length_question <- if (questionable_kid > dim(R$HCL$merge)[1]) 1 else R$clusts[[questionable_kid]] %>% length()
@@ -201,7 +201,7 @@ filter_peaks <- function(R, peak_list, threshold, dense_col = "densities"){
         return(i)
       }
       else{
-        return(c(pride, questionable_kid))
+        return(R$HCL$merge[i,])
       }
     }
   }) %>% unlist()
