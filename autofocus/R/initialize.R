@@ -12,6 +12,7 @@
 #' @param use_wgcna Whether or not to use WGNA for hiearchical clustering. Default: F.
 #' @param adj_method Which p-value adjustment method to use. One of c("bonferroni", "fdr").
 #' @param corr_method Which correlation method to use. One of c("pearson", "spearman")
+#' @param calculate_mgms Boolean, should mgms be calculated (set to F for time saving purposes)
 #'
 #' @return R struct with the data matrix, correlation matrix,
 #' sample and molecular annotations, hierarchical structure, cluster membership
@@ -33,7 +34,8 @@ initialize_R <- function(data.matrix,
                          cores = 4,
                          use_wgcna = F,
                          adj_method = c("bonferroni", "fdr"),
-                         corr_method = c("pearson", "spearman")
+                         corr_method = c("pearson", "spearman"),
+                         calculate_mgms = T
 ){
 
   adj_method = match.arg(adj_method)
@@ -93,6 +95,7 @@ initialize_R <- function(data.matrix,
 
   # Get all clusters in the hierarchical tree
   R$clusts <- lapply(1:dim(R$HCL$merge)[1], function(i) {get_members(R, i)})
+  R$phenotypes <- phenotype
   dend_xy <- R$HCL %>% as.dendrogram %>% dendextend::get_nodes_xy()
 
   # Get coordinate information
@@ -118,17 +121,23 @@ initialize_R <- function(data.matrix,
                              Coord_X=coord_x,
                              Coord_Y=coord_y,
                              Size = c(mapply(function(i)length(i),R$clusts),rep(1, dendextend::nleaves(R$HCL))))
-
+  if(calculate_mgms){
+    print("Warning: Currently calculating MGMs. For quicker runtime, consider setting calculate_mgms parameter to FALSE")
+  }
   if(length(phenotype)==1){
     R$clust_info$densities <- get_sig_child_density(R, phenotype, confounders, method=adj_method)
 
     R$clust_info$mgm_capable <- (num_samples >= R$clust_info$Size) & (R$clust_info$densities >= 0.5) & (R$clust_info$Size>1)
-
-    if(cores > 1){
-      doParallel::registerDoParallel(cores=cores)
-      R$graphs <- foreach(i=1:nnodes(R$HCL)) %dopar% {get_edges_linear(i, R, phenotype, confounders)}
-    }else{
-      R$graphs <- lapply(1:nnodes(R$HCL), function(i) get_edges_linear(i,R, phenotype, confounders))
+    if (calculate_mgms){
+      if(cores > 1){
+        doParallel::registerDoParallel(cores=cores)
+        R$graphs <- foreach(i=1:nnodes(R$HCL)) %dopar% {get_edges_linear(i, R, phenotype, confounders)}
+      }else{
+        R$graphs <- lapply(1:nnodes(R$HCL), function(i) get_edges_linear(i,R, phenotype, confounders))
+      }
+    }
+    else{
+      R$graphs <- NULL
     }
 
   }else if(length(phenotype)==2){
@@ -137,18 +146,22 @@ initialize_R <- function(data.matrix,
 
     R$clust_info$pheno2_densities <- get_sig_child_density(R, phenotype[2], confounders, method=adj_method)
     R$clust_info$pheno2_mgm_capable <- (num_samples >= R$clust_info$Size) & (R$clust_info$pheno2_densities >= 0.5) & (R$clust_info$Size>1)
-
-    if(cores > 1){
-      doParallel::registerDoParallel(cores=cores)
-      R$graphs <- foreach(i=1:nnodes(R$HCL)) %dopar% {get_edges_linear(i, R, phenotype, confounders)}
-    }else{
-      R$graphs <- lapply(1:nnodes(R$HCL), function(i) get_edges_linear(i,R, phenotype, confounders))
+    if (calculate_mgms){
+      if(cores > 1){
+        doParallel::registerDoParallel(cores=cores)
+        R$graphs <- foreach(i=1:nnodes(R$HCL)) %dopar% {get_edges_linear(i, R, phenotype, confounders)}
+      }else{
+        R$graphs <- lapply(1:nnodes(R$HCL), function(i) get_edges_linear(i,R, phenotype, confounders))
+      }
     }
-
+    else{
+      R$graphs <- NULL
+    }
 
   }else{
     stop("autofocus only supports viewing up to two phenotypes.")
   }
+
   to_remove <- c("data", "dist","C","order")
   R[!(names(R) %in% to_remove)]
 

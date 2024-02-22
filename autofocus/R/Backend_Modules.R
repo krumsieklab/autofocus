@@ -130,7 +130,6 @@ get_parent <- function(
 #'
 #' @noRd
 get_sig_child_density <- function(R, phenotype, confounders, method="fdr"){
-  print(method)
   sig_kids<-lapply(1:dendextend::nleaves(R$HCL), function(i) {
     data <- data.frame(pheno=R$samples[[phenotype]], molecule = R$data[,i], R$samples[,confounders])
     reg <- lm(pheno ~ ., data = data)
@@ -403,4 +402,69 @@ get_wgcna_dist_metric <- function(input_matrix, cores){
 
   return(dissTom)
 
+}
+
+#' Get summary cluster information at an input threshold
+#'
+#' This is a helper function for the threshold_analysis function. It calculates
+#' the metrics for threshold analysis for an individual threshold
+#'
+#' @param R R_struct output from initialize_R
+#' @param threshold Which threshold to calculate metric for
+#' @param density_col Column name in R struct that stores densities
+#' @param metric Which metric to calculate
+#'
+#' @return The input metric for the clusters returned by R at input threshold
+#'
+#' @noRd
+get_cluster_info <- function(
+    R,
+    threshold,
+    metric = "prop_non_sig_in_clusts"){
+  # Get tree
+  hc <- R$HCL
+
+  # Single Phenotype
+  # Get all peaks meeting threshold
+  potential_peaks <- identify_peaks(R, dim(hc$merge)[1], threshold, c(), "densities")
+  # Filter out piggy backers, replaced with their children
+  filtered_peaks <- filter_peaks(R, potential_peaks, threshold, "densities")
+
+  # While there are still new children to check
+  while(!(all(potential_peaks==filtered_peaks))){
+
+    # Get the unchecked children
+    new_potential_peaks <- unlist(lapply(filtered_peaks,function(i)
+      identify_peaks(R, i, threshold, c(), "densities")))
+    filtered_peaks <- filter_peaks(R, new_potential_peaks, threshold, "densities")
+    potential_peaks <- new_potential_peaks
+  }
+  nodes_in_clusters <- R$clust_info %>%
+    mutate(num_sig_in_clust = Size*densities) %>%
+    mutate(num_non_sig_in_clust = Size - (Size*densities)) %>%
+    filter(ClusterID %in% filtered_peaks)
+
+  # Proportion of nodes in returned clusters that aren't significant
+  if(metric == "prop_non_sig_in_clusts"){
+    return(sum(nodes_in_clusters$num_non_sig_in_clust)/sum(nodes_in_clusters$Size))
+  }
+  # Number of singletons
+  else if(metric =="singletons"){
+    return(sum(R$clust_info$Size==1 & R$clust_info$densities==1) - sum(nodes_in_clusters$num_sig_in_clust))
+  }
+  # Number of clusters
+  else if(metric == "num_clusts"){
+    return(length(filtered_peaks))
+  }
+  #  Cluster size range
+  else if(metric == "clust_size_range"){
+    return(nodes_in_clusters %>% .$Size %>% range %>% diff)
+  }
+  # Average Enrichment of clusters
+  else if(metric == "avg_enrichment"){
+    return(mean(nodes_in_clusters$densities))
+  }
+  else{ # Height range
+    nodes_in_clusters %>% .$Coord_Y %>% range %>% diff
+  }
 }
