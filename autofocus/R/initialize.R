@@ -1,4 +1,4 @@
-#' Initialize autofocus data struct
+#' Initialize autofocus data struct from data matrices
 #'
 #' Takes as input a data matrix, annotations on the samples and annotations on the molecules
 #' and creates a list structure, R with the hierarchical clustering structure and cluster informations.
@@ -24,9 +24,10 @@
 #' @import parallel
 #' @import foreach
 #' @importFrom doParallel registerDoParallel
+#' @import magrittr
 #'
 #' @export
-initialize_R <- function(data.matrix,
+initialize_R_from_matrices <- function(data.matrix,
                          sample.data,
                          mol.data,
                          confounders,
@@ -125,7 +126,7 @@ initialize_R <- function(data.matrix,
     print("Warning: Currently calculating MGMs. For quicker runtime, consider setting calculate_mgms parameter to FALSE")
   }
   if(length(phenotype)==1){
-    R$clust_info$densities <- get_sig_child_density(R, phenotype, confounders, method=adj_method)
+    R %<>%  get_sig_child_density(phenotype, confounders, method=adj_method)
 
     R$clust_info$mgm_capable <- (num_samples >= R$clust_info$Size) & (R$clust_info$densities >= 0.5) & (R$clust_info$Size>1)
     if (calculate_mgms){
@@ -141,10 +142,10 @@ initialize_R <- function(data.matrix,
     }
 
   }else if(length(phenotype)==2){
-    R$clust_info$pheno1_densities <- get_sig_child_density(R, phenotype[1], confounders, method=adj_method)
+    R %<>% get_sig_child_density(phenotype[1], confounders, method=adj_method, col_anno = "pheno1_")
     R$clust_info$pheno1_mgm_capable <- (num_samples >= R$clust_info$Size) & (R$clust_info$pheno1_densities >= 0.5) & (R$clust_info$Size>1)
 
-    R$clust_info$pheno2_densities <- get_sig_child_density(R, phenotype[2], confounders, method=adj_method)
+    R %<>% get_sig_child_density(phenotype[2], confounders, method=adj_method, col_anno = "pheno2_")
     R$clust_info$pheno2_mgm_capable <- (num_samples >= R$clust_info$Size) & (R$clust_info$pheno2_densities >= 0.5) & (R$clust_info$Size>1)
     if (calculate_mgms){
       if(cores > 1){
@@ -166,4 +167,150 @@ initialize_R <- function(data.matrix,
   R[!(names(R) %in% to_remove)]
 
 }
+
+
+#' Initialize autofocus data struct from SummarizedExperiment
+#'
+#' Takes as input a data matrix, annotations on the samples and annotations on the molecules
+#' and creates a list structure, R with the hierarchical clustering structure and cluster informations.
+#'
+#' @param SE SummarizedExperiment where assya is a matrix with samples as rows and biomolecules as columns, colData is a matrix of annotation data of samples, and rowData is a matrix of annotation data of biomolecules.
+#' @param confounders Vector of names of potential confounders (names must be in colData of SE).
+#' @param phenotype Name of column containing phenotype of interest, must be in colData of SE.
+#' @param cores Number of cores to run on. Default: 4.
+#' @param use_wgcna Whether or not to use WGNA for hiearchical clustering. Default: F.
+#' @param adj_method Which p-value adjustment method to use. One of c("bonferroni", "fdr").
+#' @param corr_method Which correlation method to use. One of c("pearson", "spearman")
+#' @param calculate_mgms Boolean, should mgms be calculated (set to F for time saving purposes)
+#'
+#' @return R struct with the data matrix, correlation matrix,
+#' sample and molecular annotations, hierarchical structure, cluster membership
+#' node order within the hierarchical structure and a color vector for the platforms
+#'
+#' @author AS
+#'
+#' @importFrom dendextend nnodes
+#' @import parallel
+#' @import foreach
+#' @importFrom doParallel registerDoParallel
+#' @import magrittr
+#'
+#' @export
+initialize_R_from_SE <- function(SE,
+                                 confounders,
+                                 phenotype,
+                                 cores = 4,
+                                 use_wgcna = F,
+                                 adj_method = c("bonferroni", "fdr"),
+                                 corr_method = c("pearson", "spearman"),
+                                 calculate_mgms = T
+){
+
+  adj_method = match.arg(adj_method)
+
+  ## check input
+  stopifnot("SummarizedExperiment" %in% class(SE))
+
+  # Organize input data
+  R <- list(data = scale(t(assay(SE))), samples = colData(SE), annos = rowData(SE))
+
+  # run WGCNA?
+  if(use_wgcna){
+    dissTom <- get_wgcna_dist_metric(t(assay(SE)), cores)
+    R$HCL <- hclust(as.dist(dissTom),method="average")
+  }else{
+    # Calculate correlations between biomolecules
+    R$C <- stats::cor(t(assay(SE)), use="pairwise.complete.obs", method = corr_method)
+
+    # Calculate hierarchical structure, order of nodes
+    R$HCL <- R %>% get_dendro(method = "average", cores)
+  }
+
+  R$dend_data <- try(ggdendro::dendro_data(as.dendrogram(R$HCL), type = "rectangle"), silent = T)
+  if(class(R$dend_data)=="try-error"){
+    if(R$dend_data == "Error : node stack overflow\n"){
+      warning("Hierarchical tree exceeds maximum recursion depth and cannot be drawn with the
+              ggdendro::dendro_data function. This will affect visualization of the dendrogram
+              in the autofocus shiny app.")
+    }else{
+      stop(glue::glue("The following error was encountered running ggdendro::dendro_data:\n", R$dend_data))
+    }
+  }
+
+  R$order <- get_dend_indices(R, dim(R$HCL$merge)[1], c())
+
+  # Get all clusters in the hierarchical tree
+  R$clusts <- lapply(1:dim(R$HCL$merge)[1], function(i) {get_members(R, i)})
+  R$phenotypes <- phenotype
+  dend_xy <- R$HCL %>% as.dendrogram %>% dendextend::get_nodes_xy()
+
+  # Get coordinate information
+  parents <- lapply(1:nnodes(R$HCL), function(i) {get_parent(R,i)}) %>% unlist()
+  coord_x <-lapply(1:nnodes(R$HCL), function(i) {round(dend_xy[which(R$order==i),1], digits = 10)}) %>% unlist()
+  coord_y <- lapply(1:nnodes(R$HCL), function(i){round(dend_xy[which(R$order==i),2],digits= 10)}) %>% unlist()
+
+  # Get the number of full samples in each cluster
+  num_samples <- lapply(1:nnodes(R$HCL), function (i) {
+    if (i > dim(R$HCL$merge)[1]){
+      return(sum(!is.na(R$data[,(i-dim(R$HCL$merge)[1])])))
+    }
+    else{
+      members <-  R$clusts[i][[1]]
+      data = R$data[,members]
+      return(1*(apply(is.na(data),1,sum)==0) %>% sum())
+    }
+  }) %>% unlist()
+
+  # Build data.frame containing data for each cluster
+  R$clust_info <- data.frame(ClusterID=1:nnodes(R$HCL),
+                             Parent = parents,
+                             Coord_X=coord_x,
+                             Coord_Y=coord_y,
+                             Size = c(mapply(function(i)length(i),R$clusts),rep(1, dendextend::nleaves(R$HCL))))
+  if(calculate_mgms){
+    print("Warning: Currently calculating MGMs. For quicker runtime, consider setting calculate_mgms parameter to FALSE")
+  }
+  if(length(phenotype)==1){
+    R %<>%  get_sig_child_density(phenotype, confounders, method=adj_method)
+
+    R$clust_info$mgm_capable <- (num_samples >= R$clust_info$Size) & (R$clust_info$densities >= 0.5) & (R$clust_info$Size>1)
+    if (calculate_mgms){
+      if(cores > 1){
+        doParallel::registerDoParallel(cores=cores)
+        R$graphs <- foreach(i=1:nnodes(R$HCL)) %dopar% {get_edges_linear(i, R, phenotype, confounders)}
+      }else{
+        R$graphs <- lapply(1:nnodes(R$HCL), function(i) get_edges_linear(i,R, phenotype, confounders))
+      }
+    }
+    else{
+      R$graphs <- NULL
+    }
+
+  }else if(length(phenotype)==2){
+    R %<>% get_sig_child_density(phenotype[1], confounders, method=adj_method, col_anno = "pheno1_")
+    R$clust_info$pheno1_mgm_capable <- (num_samples >= R$clust_info$Size) & (R$clust_info$pheno1_densities >= 0.5) & (R$clust_info$Size>1)
+
+    R %<>% get_sig_child_density(phenotype[2], confounders, method=adj_method, col_anno = "pheno2_")
+    R$clust_info$pheno2_mgm_capable <- (num_samples >= R$clust_info$Size) & (R$clust_info$pheno2_densities >= 0.5) & (R$clust_info$Size>1)
+    if (calculate_mgms){
+      if(cores > 1){
+        doParallel::registerDoParallel(cores=cores)
+        R$graphs <- foreach(i=1:nnodes(R$HCL)) %dopar% {get_edges_linear(i, R, phenotype, confounders)}
+      }else{
+        R$graphs <- lapply(1:nnodes(R$HCL), function(i) get_edges_linear(i,R, phenotype, confounders))
+      }
+    }
+    else{
+      R$graphs <- NULL
+    }
+
+  }else{
+    stop("autofocus only supports viewing up to two phenotypes.")
+  }
+
+  to_remove <- c("data", "dist","C","order")
+  R[!(names(R) %in% to_remove)]
+
+}
+
 

@@ -1,23 +1,21 @@
 # AutoFocus
 
-The repository contains scripts to replicate findings in the paper **Schweickart et al., "_AutoFocus: A hierarchical framework to explore multi-omic disease associations spanning multiple scales of biomolecular interaction"_**
+The repository contains scripts to replicate findings in the paper **Schweickart et al., "_AutoFocus: A hierarchical framework to explore multi-omic disease associations spanning multiple scales of biomolecular interaction"_ (2023)**
 
 <br>
 
 ## Requirements and Installation
 
-<details>
-  <summary>Click to expand</summary>
-  
-  ### Hardware Requirements
+
+### Hardware Requirements
   
   The code in this repository requires only a standard computer with enough RAM to support the in-memory operations.
   
-  ### Software Requirements
+### Software Requirements
   
   This code was created with R version 4.2.2 and Rstudio Version 2023.06.2+561 and tested on macOS (Sonoma 14.2.1) with a 2.3 GHz Quad-Core Intel Core i5 CPU.
   
-  ### Cloning the Repository from GitHub
+### Cloning the Repository from GitHub
   
   In order to install this repository as an R package, run the following command:
   
@@ -31,25 +29,37 @@ The repository contains scripts to replicate findings in the paper **Schweickart
   git clone https://github.com/krumsieklab/autofocus
   ```
   
-  ### Package Requirements
+### Package Requirements
   
   The following R packages are required to run the AutoFocus scripts:
-  -[cluster](https://cran.r-project.org/web/packages/cluster/index.html)
-  -[dendextend](https://cran.r-project.org/web/packages/dendextend/)
-  -[dplyr](https://cran.r-project.org/web/packages/dplyr/)
-  -[foreach](https://cran.r-project.org/web/packages/foreach/)
-  -[ggplot2](https://cran.r-project.org/web/packages/ggplot2/)
-  -[glmnet](https://cran.r-project.org/web/packages/glmnet/)
-  -[magrittr](https://cran.r-project.org/web/packages/magrittr/)
-  -[mgm](https://cran.r-project.org/web/packages/mgm/)
-  -[parallel](https://www.rdocumentation.org/packages/parallel/versions/3.6.2)
-  -[RColorBrewer](https://cran.r-project.org/web/packages/RColorBrewer/)
-  -[reshape2](https://cran.r-project.org/web/packages/reshape2/)
-  -[SummarizedExperiment](https://bioconductor.org/packages/release/bioc/html/SummarizedExperiment.html)
+
+
+  * [cluster](https://cran.r-project.org/web/packages/cluster/index.html)
+  * [dendextend](https://cran.r-project.org/web/packages/dendextend/)
+  * [doParallel](https://cran.r-project.org/web/packages/doParallel/)
+  * [dplyr](https://cran.r-project.org/web/packages/dplyr/)
+  * [DT](https://cran.r-project.org/web/packages/DT/)
+  * [foreach](https://cran.r-project.org/web/packages/foreach/)
+  * [ggplot2](https://cran.r-project.org/web/packages/ggplot2/)
+  * [glmnet](https://cran.r-project.org/web/packages/glmnet/)
+  * [htmlwidgets](https://cran.r-project.org/web/packages/htmlwidgets/)
+  * [igraph](https://cran.r-project.org/web/packages/igraph/)
+  * [magrittr](https://cran.r-project.org/web/packages/magrittr/)
+  * [mgm](https://cran.r-project.org/web/packages/mgm/)
+  * [networkD3](https://cran.r-project.org/web/packages/networkD3/)
+  * [parallel](https://www.rdocumentation.org/packages/parallel/versions/3.6.2)
+  * [plotly](https://cran.r-project.org/web/packages/plotly/)
+  * [RColorBrewer](https://cran.r-project.org/web/packages/RColorBrewer/)
+  * [RhpcBLASctl](https://cran.r-project.org/web/packages/RhpcBLASctl/)
+  * [reshape2](https://cran.r-project.org/web/packages/reshape2/)
+  * [shiny](https://cran.r-project.org/web/packages/shiny/)
+  * [shinyalert](https://cran.r-project.org/web/packages/shinyalert/)
+  * [shinydashboard](https://cran.r-project.org/web/packages/shinydashboard/)
+  * [SummarizedExperiment](https://bioconductor.org/packages/release/bioc/html/SummarizedExperiment.html)
+  * [tidyverse](https://cran.r-project.org/web/packages/tidyverse/)
   
-</details>
 
-
+<br>
 
 ## Files in this repository
 
@@ -74,24 +84,33 @@ The repository contains scripts to replicate findings in the paper **Schweickart
 
 ## Workflow Example
   
-  ### Data loading and concatenation
-  ####**Option 1: Through manual concatenation of data matrices** 
-    AutoFocus requires three data matrices:
-    1. Data measurements: rows represent samples, columns represent measured analytes. In the case of multiple datasets, matrices should be concatenated by binding columns and sample row order needs to be uniform.
-    2. Sample information: Number of rows should equal the number of rows in the data measurement matrix. In the case of multiple datasets, this information should be the same for all datasets and therefore sample information from just one platform is necessary. Sample information needs to contain a sample ID column, up to two phenotypes per sample, and all desired confounders.
-    3.Feature annotations: Number of rows should equal the number of columns in the data measurement matrix. In the case of multiple datasets, matrices should be concatenated by binding rows in the same order as was concatenated for the data measurement matrix. Feature annotations need to contain an feature ID column, and in the case of multiple datasets, a platform column is recommended.
+### Data loading and concatenation
+  
+#### **Option 1: Through manual concatenation of data matrices** 
+  AutoFocus requires three data matrices:
+  
+  1. Data measurements: rows represent samples, columns represent measured analytes. In the case of multiple datasets, matrices should be concatenated by binding columns and sample row order needs to be uniform.
+  
+  2. Sample information: Number of rows should equal the number of rows in the data measurement matrix. In the case of multiple datasets, this information should be the same for all datasets and therefore sample information from just one platform is necessary. Sample information needs to contain a sample ID column, up to two phenotypes per sample, and all desired confounders.
+  
+  3. Feature annotations: Number of rows should equal the number of columns in the data measurement matrix. In the case of multiple datasets, matrices should be concatenated by binding rows in the same order as was concatenated for the data measurement matrix. Feature annotations need to contain an feature ID column, and in the case of multiple datasets, a platform column is recommended.
     <br>
-    R/initialize.R can now be run via "initialize_R_matrices" as follows:
-    ```{r}
-    initialize_R_matrices(data_measurement_matrix, sample_information_matrix, feature_annotation_matrix, confounders, phenotype, ...)
-    ```
-    Run ?initialize_R_data_matrices in an R console for more information.
     <br>
-    ####**Option 2 (preferred): Through loading of excel sheets and merging of SummarizedExperiments**
-    The simplest way to run the AutoFocus algorithm is via datasets in individual excel sheets assuming the Excel file
+
+R/initialize.R can now be run via "initialize_R_matrices" as follows:
+    <br>
+```
+initialize_R_matrices(data_measurement_matrix, sample_information_matrix, feature_annotation_matrix, confounders, phenotype, ...)
+```
+    
+ Run ?initialize_R_data_matrices in an R console for more information.
+
+#### **Option 2 (preferred): Through loading of excel sheets and merging of SummarizedExperiments**
+
+  The simplest way to run the AutoFocus algorithm is via datasets in individual excel sheets assuming the Excel file
 contains three sheets corresponding to the assay, rowData, and colData data frames. The file must satisfy the following requirements:
-\itemize{
-  \item{The data sheet must be in samples-as-columns format, with the first column of the
+  \itemize{
+    \item{The data sheet must be in samples-as-columns format, with the first column of the
     data frame corresponding to the feature IDs and the first row corresponding to sample IDs.}
       \item{The feature sheet must contain at least two columns each with the feature IDs (the
        first column will be converted to rownames).}
@@ -100,43 +119,50 @@ contains three sheets corresponding to the assay, rowData, and colData data fram
  <br>
  
  Create a SummarizedExperiment for each excel sheet with the following function in R/load_xlsx.R:
- ```{r}
- load_xls(xlsx_file_path,data_sheet_name, feature_sheet_name, sample_sheet_name)
- ```
+```
+load_xls(xlsx_file_path,data_sheet_name, feature_sheet_name, sample_sheet_name)
+```
  <br>
  Once this has been run for each individual platform, their respective SummarizedExperiment objects should be stored in a list and can be merged in R/merge_se.R as follows:
- ```{r}
- merge_se(list_of_SummarizedExperiments, sample_id_column_name, feature_id_column_name, phenotypes, confounders)
- ```
+```
+merge_se(list_of_SummarizedExperiments, sample_id_column_name, feature_id_column_name, phenotypes, confounders)
+```
  Run ?merge_se in an R console for more information
  <br>
- R/initialize.R can now be run on the resulting merged SummarizedExperiment via "initialize_R_from_SE" as follows:
-     ```{r}
-    initialize_R_matrices(merged_SummarizedExperiment, confounders, phenotype, ...)
-    ```
-    Run ?initialize_R_from_SE in an R console for more information.
  <br>
-   ### Determining Enrichment Threshold
+ R/initialize.R can now be run on the resulting merged SummarizedExperiment via "initialize_R_from_SE" as follows:
+```
+initialize_R_matrices(merged_SummarizedExperiment, confounders, phenotype, ...)
+```
+  Run ?initialize_R_from_SE in an R console for more information.
+ <br>
+ 
+### Determining Enrichment Threshold
+   
   The AutoFocus R struct output by either initialize_R_matrices or initialize_R_from_SE can be used to explore how enrichment threshold choice will affect the output clusters. This can be done before or after (but not while) running the Shiny app. To explore how an enrichment threeshold will affect cluster output for a specific phenotype, run
-```{r}
+```
 threshold_analysis(R_struct, phenotype)
 ``` 
 for an output plot showing how various cluster metrics change based on threshold choice. This can be used to inform what threshold to use when running the Shiny app.
  <br>
-  ### Running AutoFocus Shiny app
+ 
+### Running AutoFocus Shiny app
   The AutoFocus R struct output by either initialize_R_matrices or initialize_R_from_SE can be used to run the AutoFocus Shiny app via the "run_autofocus" function in R/run_autofocus.R. If there are feature annotations you would like to explore in your clusters, define an anno_list vector with the column names of those annotations, and then run
-  ```{r}
+```
 run_autofocus(R_struct, anno_list)
 ```  
 to launch a web browser to visualize and explore results. Clusters will be determined based on a user defined enrichment threshold slider.
   <br>
-  ### Table format of cluster output
+  
+### Table format of cluster output
+  
   If you would like to explore the cluster results in data table format as opposed to in the Shiny app explorer, run the "output_cluster_table" function in R/output_cluster_table.R as follows: 
-  ```{r}
-  output_cluster_table(R_struct, threshold, phenotype, feature_name, annotation_list)
-  ```
+```
+output_cluster_table(R_struct, threshold, phenotype, feature_name, annotation_list)
+```
   If you would like all clusters for multiple phenotypes, use the phenotype = "both" option.
     
 
-
+### Contact and Questions
+  For issues running this code, please find contact information for the corresponding author in the original publication or on the Krumsiek Lab GitHub page.
 

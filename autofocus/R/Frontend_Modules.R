@@ -65,7 +65,6 @@ peak_finder_wrapper<-function (R, threshold){
     color_list[filtered_peaks]<-"#E7298A"
     sig_kids <- intersect(which(R$clust_info$Size == 1), which(R$clust_info$densities==1))
     color_list[sig_kids]<-"#E7298A"
-    print(filtered_peaks)
     color_list
   }
 

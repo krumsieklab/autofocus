@@ -129,21 +129,26 @@ get_parent <- function(
 #' @return Returns the densities and number of significant descendants of each node
 #'
 #' @noRd
-get_sig_child_density <- function(R, phenotype, confounders, method="fdr"){
-  sig_kids<-lapply(1:dendextend::nleaves(R$HCL), function(i) {
+get_sig_child_density <- function(R, phenotype, confounders, method="fdr", col_anno = ""){
+  print(phenotype)
+  sig_kids_ps<-lapply(1:dendextend::nleaves(R$HCL), function(i) {
     data <- data.frame(pheno=R$samples[[phenotype]], molecule = R$data[,i], R$samples[,confounders])
     reg <- lm(pheno ~ ., data = data)
     summary(reg)$coefficients["molecule", "Pr(>|t|)"]
 
   }) %>% unlist %>%  p.adjust(method=method)
-
-  sig_kids<-1*(sig_kids<0.05)
+  sig_kids<-1*(sig_kids_ps<0.05)
 
   densities <- lapply(1:dim(R$HCL$merge)[1], function(i) {
     members <-  R$clusts[i][[1]]
     sum(sig_kids[members])/length(members)
   }) %>% unlist()
-  c(densities, sig_kids)
+
+  R$clust_info[[paste0(col_anno, "densities")]] <- c(densities, sig_kids)
+
+  R$annos[[paste0(col_anno, "p_value")]] <- sig_kids_ps
+
+  R
 }
 
 #' Get direct edges between disease phenotype and module members
