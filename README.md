@@ -1,6 +1,6 @@
 # AutoFocus
 
-The repository contains scripts to replicate findings in the paper **Schweickart et al., "_AutoFocus: A hierarchical framework to explore multi-omic disease associations spanning multiple scales of biomolecular interaction"_ (2023)**
+The repository contains scripts to replicate findings in the paper **Schweickart et al., "_AutoFocus: A hierarchical framework to explore multi-omic disease associations spanning multiple scales of biomolecular interaction"_ (Communications Biology, 2024) [paper link](https://www.nature.com/articles/s42003-024-06724-2)**
 
 <br>
 
